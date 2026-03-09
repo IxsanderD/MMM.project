@@ -22,6 +22,7 @@ class Yee:
         # Parameters:
         self.eps = np.ones((Nx+1,Ny+1))
         self.mu = np.ones((Nx+1,Ny+1))
+        self.c = 1
         self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
         self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
         self.sigma = np.zeros((Nx+1,Ny+1))
@@ -45,7 +46,7 @@ class Yee:
     def update(self):
         # Update Ez:
         self.Ez[1:-1,1:-1] = (
-            self.A[1:-1,1:-1]*self.Ez[1:-1,1:-1]+self.B[1:-1,1:-1]/self.dx_dual[:]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
+            self.A[1:-1,1:-1]*self.Ez[1:-1,1:-1] + self.B[1:-1,1:-1]/self.dx_dual[:]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
             - self.B[1:-1,1:-1]/self.dy_dual[:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
         )
         # Source:
@@ -69,17 +70,17 @@ class Yee:
         ax.set_ylabel('y [m]')
         ax.set_xlim(0,self.L)
         ax.set_ylim(0,self.L)
-        source_marker, = ax.plot(self.xs, self.ys, 'o', color='black', label='source', zorder=3, markersize=6)
+        ax.set_title('Ez')
+        source_marker, = ax.plot(sum(self.dx[:self.xs]), sum(self.dy[:self.ys]), 'o', color='black', label='source', markersize=2, zorder=3)
         # rec1, = ax.plot(self.x_recorders[0], self.y_recorders[0], 'x', color='red', label='recorder 1', zorder=3, markersize=6)
         def update(frame):
             self.update_loop(speed)
             im.set_data(self.Ez.T)
-            ax.set_title(f'Ez at time: {speed*frame*self.dt:.2f} s')
-            return [im, source_marker]
+            return [im]
         
-        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=1, repeat=repeat)
+        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt * 1000), repeat=repeat)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="3%", pad=0.05)
         cb = fig.colorbar(im, cax=cax, label='Ez [V/m]')
-        ax.legend(loc='upper left')
+        ax.legend(loc='upper left') # For source and recorders
         plt.show()
