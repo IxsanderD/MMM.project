@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class FCI:
     def __init__(self,Nx,Ny,Nt,dx,dy,dt,eps,mu):
@@ -12,9 +15,18 @@ class FCI:
         self.dt=dt
         self.all_fields=np.zeros(3*Nx*Ny) # Voor ordening, kijk pagina 14 van de cursus
         self.source=np.zeros(3*Nx*Ny)
+        self.source_index=[]
         self.eps=eps # Zelfde ordening als velden
         self.mu=mu # Zelfde ordening als velden
         self.n=0
+
+    def add_source(self,xs,ys,J0,tc,width,Wc):
+        self.xs = xs
+        self.ys = ys
+        self.J0 = J0
+        self.tc = tc
+        self.width = width
+        self.Wc = Wc
     
     def construct_update_matrix(self):
         Dx=-np.diag(np.ones(self.Nx),k=0)+np.diag(np.ones(self.Nx-1),k=1)+np.diag(np.ones(1),k=-self.Nx+1)
@@ -75,6 +87,36 @@ class FCI:
         self.n=0
     
     def update(self):
-        self.all_fields=self.left_matrix_inv@self.right_matrix*self.all_fields+self.source
+        self.source[self.xs*self.Ny+self.ys]+=self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
+        self.all_fields=self.left_matrix_inv@(self.right_matrix@self.all_fields+self.source)
+        self.n+=1
+
+    def update_loop(self,nt=None):
+        if nt is None:
+            nt = self.Nt
+        for _ in range(nt):
+            self.update()
+             
+    def animate(self,speed=1,repeat=False):
+        Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
+        fig, ax = plt.subplots()
+        im = ax.imshow(Ez.T,cmap='RdBu_r',extent=(0,np.sum(self.dx),0,np.sum(self.dy)),vmin=-0.1,vmax=0.1)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_xlim(0,np.sum(self.dx))
+        ax.set_ylim(0,np.sum(self.dy))
+        ax.set_title('Ez')
+        source_marker, = ax.plot(sum(self.dx[:self.xs]), sum(self.dy[:self.ys]), 'o', color='black', label='source', markersize=2, zorder=3)
+        def update(frame):
+            self.update_loop(speed)
+            im.set_data(np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny)).T)
+            return [im,source_marker]
+        
+        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt * 1000), repeat=repeat)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="3%", pad=0.05)
+        cb = fig.colorbar(im, cax=cax, label='Ez [V/m]')
+        ax.legend(loc='upper left')
+        plt.show()
 
 
