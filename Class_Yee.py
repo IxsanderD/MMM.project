@@ -52,7 +52,8 @@ class Yee:
     def update(self):
         # Update Ez:
         self.Ez[1:-1,1:-1] = (
-            self.A[1:-1,1:-1]*self.Ez[1:-1,1:-1] + self.B[1:-1,1:-1]/self.dx_dual[:]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
+            self.A[1:-1,1:-1]*self.Ez[1:-1,1:-1] + 
+            self.B[1:-1,1:-1]/self.dx_dual[:]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
             - self.B[1:-1,1:-1]/self.dy_dual[:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
         )
         # Source:
