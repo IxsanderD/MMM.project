@@ -22,7 +22,7 @@ class Yee:
         # Parameters:
         self.eps = np.ones((Nx+1,Ny+1))
         self.mu = np.ones((Nx+1,Ny+1))
-        self.c = 1
+        self.c = 1/np.sqrt(np.min(self.eps)*np.min(self.mu))
         self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
         self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
         self.sigma = np.zeros((Nx+1,Ny+1))
@@ -53,7 +53,7 @@ class Yee:
         # Update Ez:
         self.Ez[1:-1,1:-1] = (
             self.A[1:-1,1:-1]*self.Ez[1:-1,1:-1] + 
-            self.B[1:-1,1:-1]/self.dx_dual[:]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
+            self.B[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
             - self.B[1:-1,1:-1]/self.dy_dual[:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
         )
         # Source:
