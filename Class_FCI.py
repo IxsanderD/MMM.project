@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.sparse import csr_matrix
+from scipy.sparse.linalg import spsolve, svds
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -27,6 +29,11 @@ class FCI:
         self.tc = tc
         self.width = width
         self.Wc = Wc
+
+    def add_recorder(self,xr,yr):
+        self.xr = xr
+        self.yr = yr
+        self.recorded_Ez = []
     
     def construct_update_matrix(self):
         Dx=-np.diag(np.ones(self.Nx),k=0)+np.diag(np.ones(self.Nx-1),k=1)+np.diag(np.ones(1),k=-self.Nx+1)
@@ -80,27 +87,36 @@ class FCI:
         self.right_matrix[self.Nx*self.Ny:,:self.Nx*self.Ny]=-star_c_o_curl_10/2
         self.right_matrix[self.Nx*self.Ny:,self.Nx*self.Ny:]=A_mu_dt
 
-        self.left_matrix_inv=np.linalg.inv(self.left_matrix) # Echt superslechte methode voor oplossen stelsel, maar ik wil kijken of mijn methode werkt
+        self.left_matrix[0,:]=np.where(np.array([i for i in range(3*self.Nx*self.Ny)])==0,1,0) # Moeten velden ergens pinnen zodat matrix niet singulier wordt
+        self.right_matrix[0,:]=np.where(np.array([i for i in range(3*self.Nx*self.Ny)])==0,1,0)
+        self.left_matrix[self.Nx*self.Ny,:]=np.where(np.array([i for i in range(3*self.Nx*self.Ny)])==self.Nx*self.Ny,1,0)
+        self.right_matrix[self.Nx*self.Ny,:]=np.where(np.array([i for i in range(3*self.Nx*self.Ny)])==self.Nx*self.Ny,1,0)
+        self.left_matrix[2*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(3*self.Nx*self.Ny)])==2*self.Nx*self.Ny,1,0)
+        self.right_matrix[2*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(3*self.Nx*self.Ny)])==2*self.Nx*self.Ny,1,0)
 
+        self.left_matrix_csr=csr_matrix(self.left_matrix)
+ 
     def restart(self):
         self.all_fields=np.zeros(3*self.Nx*self.Ny)
         self.n=0
     
     def update(self):
-        self.source[self.xs*self.Ny+self.ys]+=self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
-        self.all_fields=self.left_matrix_inv@(self.right_matrix@self.all_fields+self.source)
+        self.source[self.xs*self.Ny+self.ys]=self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
+        self.all_fields=spsolve(self.left_matrix_csr,self.right_matrix@self.all_fields+self.source)
         self.n+=1
+        Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
+        self.recorded_Ez.append(Ez[self.xr,self.yr])
 
     def update_loop(self,nt=None):
         if nt is None:
             nt = self.Nt
         for _ in range(nt):
             self.update()
-             
+
     def animate(self,speed=1,repeat=False):
         Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
         fig, ax = plt.subplots()
-        im = ax.imshow(Ez.T,cmap='RdBu_r',extent=(0,np.sum(self.dx),0,np.sum(self.dy)),vmin=-0.1,vmax=0.1)
+        im = ax.imshow(Ez.T,cmap='RdBu_r',extent=(0,np.sum(self.dx),0,np.sum(self.dy)),vmin=-1,vmax=1)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_xlim(0,np.sum(self.dx))
@@ -109,14 +125,25 @@ class FCI:
         source_marker, = ax.plot(sum(self.dx[:self.xs]), sum(self.dy[:self.ys]), 'o', color='black', label='source', markersize=2, zorder=3)
         def update(frame):
             self.update_loop(speed)
-            im.set_data(np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny)).T)
+            Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
+            im.set_data(Ez.T)
             return [im,source_marker]
         
-        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt * 1000), repeat=repeat)
+        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt), repeat=repeat)
+        # ani.save("simulation.gif", writer="pillow", fps=10)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="3%", pad=0.05)
         cb = fig.colorbar(im, cax=cax, label='Ez [V/m]')
         ax.legend(loc='upper left')
+        plt.show()
+
+    def show_recorder(self):
+        plt.figure()
+        plt.plot(np.arange(self.n)*self.dt, self.recorded_Ez)
+        plt.xlabel('Time [s]')
+        plt.ylabel('Ez at recorder [V/m]')
+        plt.title(f'Recorded Ez at ({round(sum(self.dx[:self.xr]),1)}, {round(sum(self.dy[:self.yr]),1)})')
+        plt.grid()
         plt.show()
 
 
