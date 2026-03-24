@@ -79,6 +79,8 @@ class Yee:
         self.Hy = np.zeros((self.Nx,self.Ny+1))
         self.recorded_Ez = []
         self.n = 0
+        self.Ezx = np.zeros((self.Nx+1,self.Ny+1))
+        self.Ezy = np.zeros((self.Nx+1,self.Ny+1))
         
     def show_PML(self):
         plt.figure(figsize=(12,5))
@@ -104,7 +106,6 @@ class Yee:
             self.B[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
             - self.B[1:-1,1:-1]/self.dy_dual[:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
         )
-        self.Ez = self.Ezx + self.Ezy
         # Source:
         self.Ez[self.xs,self.ys] += -self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
         #Update Hy:
@@ -114,19 +115,25 @@ class Yee:
         self.n += 1
         self.recorded_Ez.append(self.Ez[self.xr,self.yr])
     
-    def update_PML(self):
+    def update_PML(self): # NOG WERK AAN!!!
         # Update Ez:
-        self.Ez[1:-1,1:-1] = (
-            self.A[1:-1,1:-1]*self.Ez[1:-1,1:-1] + 
-            self.B[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
-            - self.B[1:-1,1:-1]/self.dy_dual[:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
+        self.Ezy[1:-1,1:-1] = (
+            self.Czy[1:-1,1:-1]*self.Ezy[1:-1,1:-1] 
+            - self.Dzy[1:-1,1:-1]/self.dy_dual[:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
+        )
+        self.Ezx[1:-1,1:-1] = (
+            self.Czy[1:-1,1:-1]*self.Ezx[1:-1,1:-1] 
+            + self.Dzy[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
         )
         # Source:
-        self.Ez[self.xs,self.ys] += -self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
+        self.Ezx[self.xs,self.ys] += -self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        self.Ezy[self.xs,self.ys] += -self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        self.Ez = self.Ezx + self.Ezy
         #Update Hy:
-        self.Hy[:,1:-1] = self.Hy[:,1:-1] + self.dt/(self.muy[:,1:-1]/self.dx[:,np.newaxis])*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
+        self.Hy[:,1:-1] = self.Cy[:,1:-1]*self.Hy[:,1:-1] + self.Dy[:,1:-1]/self.dx[:,np.newaxis]*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
         #Update Hx:
-        self.Hx[1:-1,:] = self.Hx[1:-1,:] - self.dt/(self.mux[1:-1,:]/self.dy[np.newaxis,:])*(self.Ez[1:-1,1:]-self.Ez[1:-1,:-1])
+        self.Hx[1:-1,:] = self.Cx[1:-1,:]*self.Hx[1:-1,:] - self.Dx[1:-1,:]/self.dy[np.newaxis,:]*(self.Ez[1:-1,1:]-self.Ez[1:-1,:-1])
+        #Time step:
         self.n += 1
         self.recorded_Ez.append(self.Ez[self.xr,self.yr])
     

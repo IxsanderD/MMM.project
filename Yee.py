@@ -19,17 +19,16 @@ ys = Ny//2
 xr = Nx//2
 yr = Ny//2
 
-N_PML = 10
+N_PML = 20
 m = 4
-
-solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m)
 
 ###
 # Without PML
 ###
+solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=False)
+solver.add_source(xs,ys,J0,tc,width,Wc)
+solver.add_recorder(xr,yr)
 
-# solver.add_source(xs,ys,J0,tc,width,Wc)
-# solver.add_recorder(xr,yr)
 # solver.animate(speed = 100)
 # solver.restart()
 
@@ -40,16 +39,15 @@ solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m)
 ###
 # With PML
 ###
-solver.PML = True
+solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
+solver.add_source(xs,ys,J0,tc,width,Wc)
+solver.add_recorder(xr,yr)
 
 # Plot PML's:
-solver.show_PML()
+# solver.show_PML()
 
-# solver = Yee(L,Nx,Ny,Nt,dt)
-# solver.add_source(xs,ys,J0,tc,width,Wc)
-# solver.add_recorder(xr,yr)
-# solver.animate(speed = 100)
-# solver.restart()
+solver.animate(speed = 100)
+solver.restart()
 
 # solver.update_loop()
 # solver.show_recorder()
