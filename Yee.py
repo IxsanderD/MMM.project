@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from Class_Yee import Yee
 
 L = 1
-Nx = 200
+Nx = 100
 Ny = 100
 c = 1
 CFL = 0.9
@@ -19,16 +19,38 @@ ys = Ny//2
 xr = Nx//2
 yr = Ny//2
 
+N_PML = 10
+m = 4
+
+solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m)
+
 ###
 # Without PML
 ###
 
-solver = Yee(L,Nx,Ny,Nt,dt)
-solver.add_source(xs,ys,J0,tc,width,Wc)
-solver.add_recorder(xr,yr)
-solver.animate(speed = 100)
-solver.restart()
+# solver.add_source(xs,ys,J0,tc,width,Wc)
+# solver.add_recorder(xr,yr)
+# solver.animate(speed = 100)
+# solver.restart()
 
-solver.update_loop()
-solver.show_recorder()
-solver.restart()
+# solver.update_loop()
+# solver.show_recorder()
+# solver.restart()
+
+###
+# With PML
+###
+solver.PML = True
+
+# Plot PML's:
+solver.show_PML()
+
+# solver = Yee(L,Nx,Ny,Nt,dt)
+# solver.add_source(xs,ys,J0,tc,width,Wc)
+# solver.add_recorder(xr,yr)
+# solver.animate(speed = 100)
+# solver.restart()
+
+# solver.update_loop()
+# solver.show_recorder()
+# solver.restart()

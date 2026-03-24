@@ -4,7 +4,7 @@ from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class Yee:
-    def __init__(self,L,Nx,Ny,Nt,dt):
+    def __init__(self,L,Nx,Ny,Nt,dt,N_PML,m,PML=False):
         self.L = L
         self.Nx = Nx
         self.Ny = Ny
@@ -28,6 +28,37 @@ class Yee:
         self.sigma = np.zeros((Nx+1,Ny+1))
         self.A = (self.eps/self.dt-self.sigma/2)/(self.eps/self.dt+self.sigma/2)
         self.B = 1/(self.eps/self.dt+self.sigma/2)
+        # PML:
+        self.PML = PML
+        self.sigma_max = (m+1)/(150*np.pi*self.dx[0])
+        self.sig = np.array([self.sigma_max*(i/N_PML)**m for i in range(N_PML)])
+        self.Ezx = np.zeros((Nx+1,Ny+1))
+        self.Ezy = np.zeros((Nx+1,Ny+1))
+        self.sigmy = np.zeros((Nx,Ny+1))
+        self.sigmx = np.zeros((Nx+1,Ny))
+        self.sigey = np.zeros((Nx+1,Ny+1))
+        self.sigex = np.zeros((Nx+1,Ny+1))
+        
+        def put_pml(sig_matrix,direction):
+            if direction == 'x':
+                sig_matrix[:N_PML,:] = self.sig[::-1][:, np.newaxis]
+                sig_matrix[-N_PML:,:] = self.sig[:, np.newaxis]
+            if direction == 'y':
+                sig_matrix[:,:N_PML] = np.maximum(sig_matrix[:,:N_PML], self.sig[::-1][np.newaxis, :])
+                sig_matrix[:,-N_PML:] = np.maximum(sig_matrix[:,-N_PML:], self.sig[np.newaxis, :])
+        
+        put_pml(self.sigmy,'y')
+        put_pml(self.sigmx,'x')
+        put_pml(self.sigey,'y')
+        put_pml(self.sigex,'x')
+        self.Cy = (self.muy/self.dt-self.sigmy/2)/(self.muy/self.dt+self.sigmy/2)
+        self.Dy = 1/(self.muy/self.dt+self.sigmy/2)
+        self.Cx = (self.mux/self.dt-self.sigmx/2)/(self.mux/self.dt+self.sigmx/2)
+        self.Dx = 1/(self.mux/self.dt+self.sigmx/2)
+        self.Czy = (self.eps/self.dt-self.sigey/2)/(self.eps/self.dt+self.sigey/2)
+        self.Dzy = 1/(self.eps/self.dt+self.sigey/2)
+        self.Czx = (self.eps/self.dt-self.sigex/2)/(self.eps/self.dt+self.sigex/2)
+        self.Dzx = 1/(self.eps/self.dt+self.sigex/2)
         
     def add_source(self,xs,ys,J0,tc,width,Wc):
         self.xs = xs
@@ -48,8 +79,42 @@ class Yee:
         self.Hy = np.zeros((self.Nx,self.Ny+1))
         self.recorded_Ez = []
         self.n = 0
+        
+    def show_PML(self):
+        plt.figure(figsize=(12,5))
+        plt.subplot(1,2,1)
+        plt.imshow(self.sigmy.T,cmap='viridis',extent=(0,self.L,0,self.L))
+        plt.colorbar()
+        plt.title('Sigma_y')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.subplot(1,2,2)
+        plt.imshow(self.sigmx.T,cmap='viridis',extent=(0,self.L,0,self.L))
+        plt.colorbar()
+        plt.title('Sigma_x')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.tight_layout()
+        plt.show()
     
     def update(self):
+        # Update Ez:
+        self.Ez[1:-1,1:-1] = (
+            self.A[1:-1,1:-1]*self.Ez[1:-1,1:-1] + 
+            self.B[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
+            - self.B[1:-1,1:-1]/self.dy_dual[:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
+        )
+        self.Ez = self.Ezx + self.Ezy
+        # Source:
+        self.Ez[self.xs,self.ys] += -self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
+        #Update Hy:
+        self.Hy[:,1:-1] = self.Hy[:,1:-1] + self.dt/(self.muy[:,1:-1]/self.dx[:,np.newaxis])*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
+        #Update Hx:
+        self.Hx[1:-1,:] = self.Hx[1:-1,:] - self.dt/(self.mux[1:-1,:]/self.dy[np.newaxis,:])*(self.Ez[1:-1,1:]-self.Ez[1:-1,:-1])
+        self.n += 1
+        self.recorded_Ez.append(self.Ez[self.xr,self.yr])
+    
+    def update_PML(self):
         # Update Ez:
         self.Ez[1:-1,1:-1] = (
             self.A[1:-1,1:-1]*self.Ez[1:-1,1:-1] + 
@@ -69,7 +134,10 @@ class Yee:
         if nt is None:
             nt = self.Nt
         for _ in range(nt):
-            self.update()
+            if self.PML:
+                self.update_PML()
+            else:
+                self.update()
             
     def animate(self,speed=1,repeat=False):
         fig, ax = plt.subplots()
