@@ -5,8 +5,8 @@ import time
 
 start=time.perf_counter()
 
-Nx=80
-Ny=80
+Nx=50
+Ny=50
 Nt=100
 dx=np.ones(Nx)
 dy=np.ones(Ny)
@@ -19,11 +19,12 @@ tc = 5*width
 Wc = 2*np.pi*0.5/tc
 tf=5*tc
 dt=tf/Nt
+kmax=1000
 
 xs = Nx//4
 ys = Ny//2
 
-solver=FCI(Nx,Ny,Nt,dx,dy,dt,eps,mu)
+solver=FCI(Nx,Ny,Nt,dx,dy,dt,eps,mu,kmax)
 solver.construct_update_matrix()
 end=time.perf_counter()
 print(f"Runtime: {end - start:.6f} seconds")
