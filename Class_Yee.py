@@ -30,7 +30,7 @@ class Yee:
         self.B = 1/(self.eps/self.dt+self.sigma/2)
         # PML:
         self.PML = PML
-        self.sigma_max = (m+1)/(150*np.pi*self.dx[0])
+        self.sigma_max = 500  #(m+1)/(150*np.pi*self.dx[0])
         self.sig = np.array([self.sigma_max*(i/N_PML)**m for i in range(N_PML)])
         self.Ezx = np.zeros((Nx+1,Ny+1))
         self.Ezy = np.zeros((Nx+1,Ny+1))
@@ -112,6 +112,7 @@ class Yee:
         self.Hy[:,1:-1] = self.Hy[:,1:-1] + self.dt/(self.muy[:,1:-1]*self.dx[:,np.newaxis])*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
         #Update Hx:
         self.Hx[1:-1,:] = self.Hx[1:-1,:] - self.dt/(self.mux[1:-1,:]*self.dy[np.newaxis,:])*(self.Ez[1:-1,1:]-self.Ez[1:-1,:-1])
+        # Time step:
         self.n += 1
         self.recorded_Ez.append(self.Ez[self.xr,self.yr])
     
@@ -122,12 +123,12 @@ class Yee:
             - self.Dzy[1:-1,1:-1]/self.dy_dual[:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
         )
         self.Ezx[1:-1,1:-1] = (
-            self.Czy[1:-1,1:-1]*self.Ezx[1:-1,1:-1] 
-            + self.Dzy[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
+            self.Czx[1:-1,1:-1]*self.Ezx[1:-1,1:-1] 
+            + self.Dzx[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
         )
         # Source:
-        self.Ezx[self.xs,self.ys] += -self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
-        self.Ezy[self.xs,self.ys] += -self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        self.Ezx[self.xs,self.ys] += self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        self.Ezy[self.xs,self.ys] += self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
         self.Ez = self.Ezx + self.Ezy
         #Update Hy:
         self.Hy[:,1:-1] = self.Cy[:,1:-1]*self.Hy[:,1:-1] + self.Dy[:,1:-1]/self.dx[:,np.newaxis]*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
