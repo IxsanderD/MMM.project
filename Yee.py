@@ -12,14 +12,14 @@ J0 = 10
 Wc = 0.2/dt
 width = 2/Wc
 tc = 5*width
-Nt = int(10*tc/dt)
+Nt = int(20*tc/dt)
 
 xs = Nx//4
 ys = Ny//3
 xr = Nx//2
 yr = Ny//2
 
-N_PML = 50
+N_PML = 30
 m = 4
 
 ###
@@ -43,9 +43,9 @@ solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
 solver.add_source(xs,ys,J0,tc,width,Wc)
 solver.add_recorder(xr,yr)
 
-solver.show_PML() # PML profile
+# solver.show_PML() # PML profile
 
-solver.animate(speed = 1)
+solver.animate(speed = 10)
 solver.restart()
 
 solver.update_loop()

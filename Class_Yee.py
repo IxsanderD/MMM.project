@@ -30,7 +30,7 @@ class Yee:
         self.B = 1/(self.eps/self.dt+self.sigma/2)
         # PML:
         self.PML = PML
-        self.sigma_max = 500  #(m+1)/(150*np.pi*self.dx[0])
+        self.sigma_max = 500 #(m+1)/(150*np.pi*self.dx[0])
         self.sig = np.array([self.sigma_max*(i/N_PML)**m for i in range(N_PML)])
         self.Ezx = np.zeros((Nx+1,Ny+1))
         self.Ezy = np.zeros((Nx+1,Ny+1))
@@ -38,27 +38,36 @@ class Yee:
         self.sigmx = np.zeros((Nx+1,Ny))
         self.sigey = np.zeros((Nx+1,Ny+1))
         self.sigex = np.zeros((Nx+1,Ny+1))
+        self.kappa_max = 6
+        self.kappa = np.array([1+(self.kappa_max-1)*(i/N_PML)**m for i in range(N_PML)])
+        self.kappax = np.ones((Nx+1,Ny+1))
+        self.kappay = np.ones((Nx+1,Ny+1))
         
-        def put_pml(sig_matrix,direction):
+        def put_pml(sig_matrix,kappa_matrix,direction):
             if direction == 'x':
                 sig_matrix[:N_PML,:] = self.sig[::-1][:, np.newaxis]
                 sig_matrix[-N_PML:,:] = self.sig[:, np.newaxis]
+                kappa_matrix[:N_PML,:] = self.kappa[::-1][:, np.newaxis]
+                kappa_matrix[-N_PML:,:] = self.kappa[:, np.newaxis]
             if direction == 'y':
                 sig_matrix[:,:N_PML] = np.maximum(sig_matrix[:,:N_PML], self.sig[::-1][np.newaxis, :])
                 sig_matrix[:,-N_PML:] = np.maximum(sig_matrix[:,-N_PML:], self.sig[np.newaxis, :])
+                kappa_matrix[:,:N_PML] = np.maximum(kappa_matrix[:,:N_PML], self.kappa[::-1][np.newaxis, :])
+                kappa_matrix[:,-N_PML:] = np.maximum(kappa_matrix[:,-N_PML:], self.kappa[np.newaxis, :])
         
-        put_pml(self.sigmy,'y')
-        put_pml(self.sigmx,'x')
-        put_pml(self.sigey,'y')
-        put_pml(self.sigex,'x')
-        self.Cy = (self.muy/self.dt-self.sigmy/2)/(self.muy/self.dt+self.sigmy/2)
-        self.Dy = 1/(self.muy/self.dt+self.sigmy/2)
-        self.Cx = (self.mux/self.dt-self.sigmx/2)/(self.mux/self.dt+self.sigmx/2)
-        self.Dx = 1/(self.mux/self.dt+self.sigmx/2)
-        self.Czy = (self.eps/self.dt-self.sigey/2)/(self.eps/self.dt+self.sigey/2)
-        self.Dzy = 1/(self.eps/self.dt+self.sigey/2)
-        self.Czx = (self.eps/self.dt-self.sigex/2)/(self.eps/self.dt+self.sigex/2)
-        self.Dzx = 1/(self.eps/self.dt+self.sigex/2)
+        put_pml(self.sigmy,self.kappay,'y')
+        put_pml(self.sigmx,self.kappax,'x')
+        put_pml(self.sigey,self.kappay,'y')
+        put_pml(self.sigex,self.kappax,'x')
+        
+        self.Cy = (self.kappax[1:]*self.muy/self.dt-self.sigmy/2)/(self.kappax[1:]*self.muy/self.dt+self.sigmy/2)
+        self.Dy = 1/(self.kappax[1:]*self.muy/self.dt+self.sigmy/2)
+        self.Cx = (self.kappay[:,1:]*self.mux/self.dt-self.sigmx/2)/(self.kappay[:,1:]*self.mux/self.dt+self.sigmx/2)
+        self.Dx = 1/(self.kappay[:,1:]*self.mux/self.dt+self.sigmx/2)
+        self.Czy = (self.kappay*self.eps/self.dt-self.sigey/2)/(self.kappay*self.eps/self.dt+self.sigey/2)
+        self.Dzy = 1/(self.kappay*self.eps/self.dt+self.sigey/2)
+        self.Czx = (self.kappax*self.eps/self.dt-self.sigex/2)/(self.kappax*self.eps/self.dt+self.sigex/2)
+        self.Dzx = 1/(self.kappax*self.eps/self.dt+self.sigex/2)
         
     def add_source(self,xs,ys,J0,tc,width,Wc):
         self.xs = xs
@@ -83,17 +92,29 @@ class Yee:
         self.Ezy = np.zeros((self.Nx+1,self.Ny+1))
         
     def show_PML(self):
-        plt.figure(figsize=(12,5))
-        plt.subplot(1,2,1)
+        plt.figure(figsize=(6,5))
+        plt.subplot(2,2,1)
         plt.imshow(self.sigmy.T,cmap='viridis',extent=(0,self.L,0,self.L))
         plt.colorbar()
         plt.title('Sigma_y')
         plt.xlabel('x')
         plt.ylabel('y')
-        plt.subplot(1,2,2)
+        plt.subplot(2,2,2)
         plt.imshow(self.sigmx.T,cmap='viridis',extent=(0,self.L,0,self.L))
         plt.colorbar()
         plt.title('Sigma_x')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.subplot(2,2,3)
+        plt.imshow(self.kappax.T,cmap='viridis',extent=(0,self.L,0,self.L))
+        plt.colorbar()
+        plt.title('Kappa_x')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.subplot(2,2,4)
+        plt.imshow(self.kappay.T,cmap='viridis',extent=(0,self.L,0,self.L))
+        plt.colorbar()
+        plt.title('Kappa_y')
         plt.xlabel('x')
         plt.ylabel('y')
         plt.tight_layout()
@@ -116,7 +137,7 @@ class Yee:
         self.n += 1
         self.recorded_Ez.append(self.Ez[self.xr,self.yr])
     
-    def update_PML(self): # NOG WERK AAN!!!
+    def update_PML(self):
         # Update Ez:
         self.Ezy[1:-1,1:-1] = (
             self.Czy[1:-1,1:-1]*self.Ezy[1:-1,1:-1] 
