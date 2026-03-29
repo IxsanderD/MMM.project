@@ -104,14 +104,14 @@ class Yee:
         self.Ez[1:-1,1:-1] = (
             self.A[1:-1,1:-1]*self.Ez[1:-1,1:-1] + 
             self.B[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
-            - self.B[1:-1,1:-1]/self.dy_dual[:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
+            - self.B[1:-1,1:-1]/self.dy_dual[np.newaxis,:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
         )
         # Source:
-        self.Ez[self.xs,self.ys] += -self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
+        self.Ez[self.xs,self.ys] += self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
         #Update Hy:
-        self.Hy[:,1:-1] = self.Hy[:,1:-1] + self.dt/(self.muy[:,1:-1]/self.dx[:,np.newaxis])*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
+        self.Hy[:,1:-1] = self.Hy[:,1:-1] + self.dt/(self.muy[:,1:-1]*self.dx[:,np.newaxis])*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
         #Update Hx:
-        self.Hx[1:-1,:] = self.Hx[1:-1,:] - self.dt/(self.mux[1:-1,:]/self.dy[np.newaxis,:])*(self.Ez[1:-1,1:]-self.Ez[1:-1,:-1])
+        self.Hx[1:-1,:] = self.Hx[1:-1,:] - self.dt/(self.mux[1:-1,:]*self.dy[np.newaxis,:])*(self.Ez[1:-1,1:]-self.Ez[1:-1,:-1])
         self.n += 1
         self.recorded_Ez.append(self.Ez[self.xr,self.yr])
     
@@ -145,16 +145,25 @@ class Yee:
                 self.update_PML()
             else:
                 self.update()
+                
+    def show_Ez(self):
+        plt.figure()
+        plt.imshow(self.Ez.T,cmap='RdBu_r',extent=(0,self.L,0,self.L),vmin=-1e-5,vmax=1e-5)
+        plt.colorbar(label='Ez [V/m]')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.title('Ez field distribution')
+        plt.show()
             
     def animate(self,speed=1,repeat=False):
         fig, ax = plt.subplots()
-        im = ax.imshow(self.Ez.T,cmap='RdBu_r',extent=(0,self.L,0,self.L),vmin=-0.1,vmax=0.1)
+        im = ax.imshow(self.Ez.T,cmap='RdBu_r',extent=(0,self.L,0,self.L),vmin=-1,vmax=1)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_xlim(0,self.L)
         ax.set_ylim(0,self.L)
         ax.set_title('Ez')
-        source_marker, = ax.plot(sum(self.dx[:self.xs]), sum(self.dy[:self.ys]), 'o', color='black', label='source', markersize=2, zorder=3)
+        source_marker, = ax.plot(sum(self.dx[:self.xs]), 1-sum(self.dy[:self.ys]), 'o', color='black', label='source', markersize=2, zorder=3)
         rec1, = ax.plot(sum(self.dx[:self.xr]), sum(self.dy[:self.yr]), 'x', color='red', label='recorder 1', zorder=3, markersize=6)
         def update(frame):
             self.update_loop(speed)

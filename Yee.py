@@ -7,15 +7,15 @@ Nx = 100
 Ny = 100
 c = 1
 CFL = 0.9
-dt = CFL/c/np.sqrt(1/np.min(L/Nx)**2+1/np.min(L/Ny)**2)
+dt = CFL/c/np.sqrt(1/(L/Nx)**2+1/(L/Ny)**2)
 J0 = 10
-width = 5*L/c
+Wc = 0.2/dt
+width = 2/Wc
 tc = 5*width
-Wc = 2*np.pi*0.5/tc
 Nt = int(7*tc/dt)
 
 xs = Nx//4
-ys = Ny//2
+ys = Ny//5
 xr = Nx//2
 yr = Ny//2
 
@@ -29,25 +29,24 @@ solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=False)
 solver.add_source(xs,ys,J0,tc,width,Wc)
 solver.add_recorder(xr,yr)
 
-# solver.animate(speed = 100)
-# solver.restart()
+solver.animate(speed = 1)
+solver.restart()
 
-# solver.update_loop()
-# solver.show_recorder()
-# solver.restart()
+solver.update_loop()
+solver.show_recorder()
+solver.restart()
 
 ###
 # With PML
 ###
-solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
-solver.add_source(xs,ys,J0,tc,width,Wc)
-solver.add_recorder(xr,yr)
+# solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
+# solver.add_source(xs,ys,J0,tc,width,Wc)
+# solver.add_recorder(xr,yr)
 
-# Plot PML's:
-# solver.show_PML()
+# solver.show_PML() # PML profile
 
-solver.animate(speed = 100)
-solver.restart()
+# solver.animate(speed = 100)
+# solver.restart()
 
 # solver.update_loop()
 # solver.show_recorder()
