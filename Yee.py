@@ -43,7 +43,7 @@ solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
 solver.add_source(xs,ys,J0,tc,width,Wc)
 solver.add_recorder(xr,yr)
 
-# solver.show_PML() # PML profile
+solver.show_PML() # PML profile
 
 solver.animate(speed = 10)
 solver.restart()
