@@ -1,12 +1,12 @@
 import numpy as np
-from scipy.sparse import csr_matrix, diags, eye, kron, csr_array, block_diag
+from scipy.sparse import csr_array, diags, eye, kron, block_diag
 from scipy.sparse.linalg import spsolve
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class FCI:
-    def __init__(self,Nx,Ny,Nt,dx,dy,dt,eps,mu,kmax):
+    def __init__(self,Nx,Ny,Nt,dx,dy,dt,eps,mu,k_max,sigma_max):
         self.Nx=Nx
         self.Ny=Ny
         self.Nt=Nt
@@ -21,7 +21,8 @@ class FCI:
         self.eps=eps # Zelfde ordening als velden
         self.mu=mu # Zelfde ordening als velden
         self.n=0
-        self.kmax=kmax
+        self.kmax=k_max
+        self.sigmamax=sigma_max
 
     def add_source(self,xs,ys,J0,tc,width,Wc):
         self.xs = xs
@@ -52,11 +53,7 @@ class FCI:
         K_y[self.Nx-10:,:]=np.repeat(k_array_v,self.Ny,axis=1)
         k_array_v=np.reshape(np.flip(k_array),(10,1))
         K_y[:10,:]=np.repeat(k_array_v,self.Ny,axis=1)
-        K_y=np.ravel(K_y)
-        K_y=diags(K_y,offsets=0,format='csr')
-        K_x=np.ravel(K_x)
-        K_x=diags(K_x,offsets=0,format='csr')
-        sigma_array=np.array([5/150/np.pi/np.mean(self.dx)*(i/10)**4 for i in range(1,11)])
+        sigma_array=np.array([self.sigmamax*(i/10)**4 for i in range(1,11)]) # 5/150/np.pi/np.mean(self.dx)
         sigma_x=np.zeros((self.Nx,self.Ny))
         sigma_x[:,self.Ny-10:]=np.tile(sigma_array,(self.Ny,1))
         sigma_x[:,:10]=np.tile(np.flip(sigma_array),(self.Ny,1))
@@ -65,6 +62,11 @@ class FCI:
         sigma_y[self.Nx-10:,:]=np.repeat(sigma_array_v,self.Ny,axis=1)
         sigma_array_v=np.reshape(np.flip(sigma_array),(10,1))
         sigma_y[:10,:]=np.repeat(sigma_array_v,self.Ny,axis=1)
+        
+        K_y=np.ravel(K_y)
+        K_y=diags(K_y,offsets=0,format='csr')
+        K_x=np.ravel(K_x)
+        K_x=diags(K_x,offsets=0,format='csr')
         sigma_x=np.ravel(sigma_x)
         sigma_x=diags(sigma_x,offsets=0,format='csr')
         sigma_y=np.ravel(sigma_y)
@@ -72,10 +74,11 @@ class FCI:
         eps=diags(self.eps,offsets=0,format='csr')
         eps_inv=diags(1/self.eps,offsets=0,format='csr')
         mu=diags(self.mu,offsets=0,format='csr')
+
         # delta_x_dual=diags(self.dx_dual,offsets=0,format='csr')
         # delta_y_dual=diags(self.dy_dual,offsets=0,format='csr')
 
-        # delta_dual=csr_matrix((2*self.Nx*self.Ny,2*self.Nx*self.Ny))
+        # delta_dual=csr_array((2*self.Nx*self.Ny,2*self.Nx*self.Ny))
         # delta_dual[:self.Nx*self.Ny,:self.Nx*self.Ny]=kron(delta_x_dual,np.eye(self.Ny),format='csr')
         # delta_dual[self.Nx*self.Ny:,self.Nx*self.Ny:]=kron(np.eye(self.Nx),delta_y_dual,format='csr')
 
@@ -83,17 +86,17 @@ class FCI:
         # delta_dual_inv=np.zeros((2*self.Nx*self.Ny,2*self.Nx*self.Ny))
         # delta_dual_inv[diags_indices_from(delta_dual_inv)]=1/delta_dual[diags_indices_from(delta_dual)]
 
-        self.left_matrix=csr_matrix((6*self.Nx*self.Ny,6*self.Nx*self.Ny))
-        self.right_matrix=csr_matrix((6*self.Nx*self.Ny,6*self.Nx*self.Ny))
+        self.left_matrix=csr_array((6*self.Nx*self.Ny,6*self.Nx*self.Ny))
+        self.right_matrix=csr_array((6*self.Nx*self.Ny,6*self.Nx*self.Ny))
 
-        star_c_o_curl_10=csr_matrix((2*self.Nx*self.Ny,self.Nx*self.Ny))
+        star_c_o_curl_10=csr_array((2*self.Nx*self.Ny,self.Nx*self.Ny))
         star_c_o_curl_10[:self.Nx*self.Ny,:]=kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')
         star_c_o_curl_10[self.Nx*self.Ny:,:]=kron(-delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')
         self.left_matrix[self.Nx*self.Ny:3*self.Nx*self.Ny,:self.Nx*self.Ny]=star_c_o_curl_10/2
         self.right_matrix[self.Nx*self.Ny:3*self.Nx*self.Ny,:self.Nx*self.Ny]=-star_c_o_curl_10/2
         del star_c_o_curl_10
 
-        star_c_o_curl_01=csr_matrix((self.Nx*self.Ny,2*self.Nx*self.Ny))
+        star_c_o_curl_01=csr_array((self.Nx*self.Ny,2*self.Nx*self.Ny))
         star_c_o_curl_01[:,:self.Nx*self.Ny]=kron(-Ax,delta_y_inv@Dy,format='csr')
         star_c_o_curl_01[:,self.Nx*self.Ny:]=kron(delta_x_inv@Dx,Ay,format='csr')
         self.left_matrix[:self.Nx*self.Ny,self.Nx*self.Ny:3*self.Nx*self.Ny]=-star_c_o_curl_01/2
@@ -167,7 +170,7 @@ class FCI:
         self.source[self.xs*self.Ny+self.ys]=self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
         self.all_fields=spsolve(self.left_matrix,self.right_matrix@self.all_fields+self.source)
         self.n+=1
-        Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
+        Ez=np.reshape(self.all_fields[3*self.Nx*self.Ny:4*self.Nx*self.Ny],(self.Nx,self.Ny))
         self.recorded_Ez.append(Ez[self.xr,self.yr])
 
     def update_loop(self,nt=None):
@@ -192,7 +195,7 @@ class FCI:
             im.set_data(Ez.T)
             return [im,source_marker]
         
-        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt), repeat=repeat)
+        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt), repeat=repeat, blit=True)
         # ani.save("simulation.gif", writer="pillow", fps=10)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="3%", pad=0.05)
