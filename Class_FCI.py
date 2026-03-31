@@ -104,44 +104,44 @@ class FCI:
         A_y=kron(Ax,np.eye(self.Ny),format='csr')
         A_z=kron(Ax,Ay,format='csr')
 
-        A1=(eps@K_x/self.dt+mu@eps_inv@sigma_x/2)@A_z
-        A2=(mu@K_y/self.dt+mu@eps_inv@sigma_y/2)@A_x
-        A3=(mu/self.dt)@A_y
+        A1=A_z@(eps@K_x/self.dt+sigma_x/2)
+        A2=A_x@(mu@K_y/self.dt+mu@eps_inv@sigma_y/2)
+        A3=A_y@(mu/self.dt)
         A_01_l=block_diag((A1,A2,A3),format='csr')
         self.left_matrix[:3*self.Nx*self.Ny,3*self.Nx*self.Ny:]=A_01_l
         del A_01_l
 
-        A1=(eps@K_x/self.dt-mu@eps_inv@sigma_x/2)@A_z
-        A2=(mu@K_y/self.dt-mu@eps_inv@sigma_y/2)@A_x
-        A3=(mu/self.dt)@A_y
+        A1=A_z@(eps@K_x/self.dt-sigma_x/2)
+        A2=A_x@(mu@K_y/self.dt-mu@eps_inv@sigma_y/2)
+        A3=A_y@(mu/self.dt)
         A_01_r=block_diag((A1,A2,A3),format='csr')
         self.right_matrix[:3*self.Nx*self.Ny,3*self.Nx*self.Ny:]=A_01_r
         del A_01_r
 
         A1=A_z/self.dt
-        A2=(K_x/self.dt+sigma_x@eps_inv/2)@A_x
-        A3=(K_y/self.dt+sigma_y@eps_inv/2)@A_y
+        A2=A_x@(K_x/self.dt+sigma_x@eps_inv/2)
+        A3=A_y@(K_y/self.dt+sigma_y@eps_inv/2)
         A_11_l=block_diag((A1,A2,A3),format='csr')
         self.left_matrix[3*self.Nx*self.Ny:,3*self.Nx*self.Ny:]=A_11_l
         del A_11_l
 
         A1=A_z/self.dt
-        A2=(K_x/self.dt-sigma_x@eps_inv/2)@A_x
-        A3=(K_y/self.dt-sigma_y@eps_inv/2)@A_y
+        A2=A_x@(K_x/self.dt-sigma_x@eps_inv/2)
+        A3=A_y@(K_y/self.dt-sigma_y@eps_inv/2)
         A_11_r=block_diag((A1,A2,A3),format='csr')
         self.right_matrix[3*self.Nx*self.Ny:,3*self.Nx*self.Ny:]=A_11_r
         del A_11_r
 
-        A1=-(K_y/self.dt+sigma_y@eps_inv/2)@A_z
+        A1=-A_z@(K_y/self.dt+sigma_y@eps_inv/2)
         A2=-A_x/self.dt
-        A3=-(K_x/self.dt+sigma_x@eps_inv/2)@A_y
+        A3=-A_y@(K_x/self.dt+sigma_x@eps_inv/2)
         A_10_l=block_diag((A1,A2,A3),format='csr')
         self.left_matrix[3*self.Nx*self.Ny:,:3*self.Nx*self.Ny]=A_10_l
         del A_10_l
 
-        A1=-(K_y/self.dt-sigma_y@eps_inv/2)@A_z
+        A1=-A_z@(K_y/self.dt-sigma_y@eps_inv/2)
         A2=-A_x/self.dt
-        A3=-(K_x/self.dt-sigma_x@eps_inv/2)@A_y
+        A3=-A_y@(K_x/self.dt-sigma_x@eps_inv/2)
         A_10_r=block_diag((A1,A2,A3),format='csr')
         self.right_matrix[3*self.Nx*self.Ny:,:3*self.Nx*self.Ny]=A_10_r
         del A_10_r

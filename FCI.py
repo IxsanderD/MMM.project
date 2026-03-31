@@ -19,7 +19,7 @@ tc = 5*width
 Wc = 2*np.pi*0.5/tc
 tf=5*tc
 dt=tf/Nt
-kmax=1000
+kmax=1
 
 xs = Nx//4
 ys = Ny//2
