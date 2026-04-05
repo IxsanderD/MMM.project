@@ -15,9 +15,9 @@ tc = 5*width
 Nt = int(20*tc/dt)
 
 xs = Nx//4
-ys = Ny//3
-xr = Nx//2
-yr = Ny//2
+ys = 3*Ny//4
+xr = Nx//4
+yr = Ny//4
 
 N_PML = 20
 m = 4
@@ -51,3 +51,4 @@ solver.restart()
 solver.update_loop()
 solver.show_recorder()
 solver.restart()
+

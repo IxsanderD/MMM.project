@@ -26,8 +26,6 @@ class Yee:
         self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
         self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
         self.sigma = np.zeros((Nx+1,Ny+1))
-        self.A = (self.eps/self.dt-self.sigma/2)/(self.eps/self.dt+self.sigma/2)
-        self.B = 1/(self.eps/self.dt+self.sigma/2)
         # PML:
         self.PML = PML
         self.sigma_max = 500 #(m+1)/(150*np.pi*self.dx[0])
@@ -60,6 +58,11 @@ class Yee:
         put_pml(self.sigey,self.kappay,'y')
         put_pml(self.sigex,self.kappax,'x')
         
+        self.make_matrices()
+        
+    def make_matrices(self):
+        self.A = (self.eps/self.dt-self.sigma/2)/(self.eps/self.dt+self.sigma/2)
+        self.B = 1/(self.eps/self.dt+self.sigma/2)
         self.Cy = (self.kappax[1:]*self.muy/self.dt-self.sigmy/2)/(self.kappax[1:]*self.muy/self.dt+self.sigmy/2)
         self.Dy = 1/(self.kappax[1:]*self.muy/self.dt+self.sigmy/2)
         self.Cx = (self.kappay[:,1:]*self.mux/self.dt-self.sigmx/2)/(self.kappay[:,1:]*self.mux/self.dt+self.sigmx/2)
@@ -71,7 +74,7 @@ class Yee:
         
     def add_source(self,xs,ys,J0,tc,width,Wc):
         self.xs = xs
-        self.ys = ys
+        self.ys = self.Ny-ys
         self.J0 = J0
         self.tc = tc
         self.width = width
@@ -81,6 +84,14 @@ class Yee:
         self.xr = xr
         self.yr = yr
         self.recorded_Ez = []
+        
+    def add_material(self,x_start,x_end,y_start,y_end,eps_r,mu_r,sigma):
+        self.eps[x_start:x_end,y_start:y_end] = eps_r
+        self.mu[x_start:x_end,y_start:y_end] = mu_r
+        self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
+        self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
+        self.sigma[x_start:x_end,y_start:y_end] = sigma
+        self.make_matrices()
         
     def restart(self):
         self.Ez = np.zeros((self.Nx+1,self.Ny+1))
@@ -177,7 +188,7 @@ class Yee:
         ax.set_xlim(0,self.L)
         ax.set_ylim(0,self.L)
         ax.set_title('Ez')
-        source_marker, = ax.plot(sum(self.dx[:self.xs]), 1-sum(self.dy[:self.ys]), 'o', color='black', label='source', markersize=2, zorder=3)
+        source_marker, = ax.plot(sum(self.dx[:self.xs]), self.L-sum(self.dy[:self.ys]), 'o', color='black', label='source', markersize=2, zorder=3)
         rec1, = ax.plot(sum(self.dx[:self.xr]), sum(self.dy[:self.yr]), 'x', color='red', label='recorder 1', zorder=3, markersize=6)
         def update(frame):
             self.update_loop(speed)
