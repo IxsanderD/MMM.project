@@ -41,6 +41,8 @@ class Yee:
         self.kappa = np.array([1+(self.kappa_max-1)*(i/N_PML)**m for i in range(N_PML)])
         self.kappax = np.ones((Nx+1,Ny+1))
         self.kappay = np.ones((Nx+1,Ny+1))
+        # Source type
+        self.source_type = None
         
         def put_pml(sig_matrix,kappa_matrix,direction):
             if direction == 'x':
@@ -80,6 +82,15 @@ class Yee:
         self.tc = tc
         self.width = width
         self.Wc = Wc
+        self.source_type = 'gaussian_modulated_sine'
+
+    def add_gaussian_source(self,xs,ys,J0,tc,width):
+        self.xs = xs
+        self.ys = self.Ny-ys
+        self.J0 = J0
+        self.tc = tc
+        self.width = width
+        self.source_type = 'gaussian'
         
     def add_recorder(self,xr,yr):
         self.xr = xr
@@ -136,7 +147,10 @@ class Yee:
             - self.B[1:-1,1:-1]/self.dy_dual[np.newaxis,:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
         )
         # Source:
-        self.Ez[self.xs,self.ys] += self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
+        if self.source_type == 'gaussian_modulated_sine':
+            self.Ez[self.xs,self.ys] += self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
+        elif self.source_type == 'gaussian':
+            self.Ez[self.xs,self.ys] += self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
         #Update Hy:
         self.Hy[:,1:-1] = self.Hy[:,1:-1] + self.dt/(self.muy[:,1:-1]*self.dx[:,np.newaxis])*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
         #Update Hx:
@@ -156,8 +170,12 @@ class Yee:
             + self.Dzx[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
         )
         # Source:
-        self.Ezx[self.xs,self.ys] += self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
-        self.Ezy[self.xs,self.ys] += self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        if self.source_type == 'gaussian_modulated_sine':
+            self.Ezx[self.xs,self.ys] += self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+            self.Ezy[self.xs,self.ys] += self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        elif self.source_type == 'gaussian':
+            self.Ezx[self.xs,self.ys] += self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+            self.Ezy[self.xs,self.ys] += self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
         self.Ez = self.Ezx + self.Ezy
         #Update Hy:
         self.Hy[:,1:-1] = self.Cy[:,1:-1]*self.Hy[:,1:-1] + self.Dy[:,1:-1]/self.dx[:,np.newaxis]*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
