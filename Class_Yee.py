@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.patches import Rectangle
 
 class Yee:
     def __init__(self,L,Nx,Ny,Nt,dt,N_PML,m,PML=False):
@@ -67,10 +68,10 @@ class Yee:
         self.Dy = 1/(self.kappax[1:]*self.muy/self.dt+self.sigmy/2)
         self.Cx = (self.kappay[:,1:]*self.mux/self.dt-self.sigmx/2)/(self.kappay[:,1:]*self.mux/self.dt+self.sigmx/2)
         self.Dx = 1/(self.kappay[:,1:]*self.mux/self.dt+self.sigmx/2)
-        self.Czy = (self.kappay*self.eps/self.dt-self.sigey/2)/(self.kappay*self.eps/self.dt+self.sigey/2)
-        self.Dzy = 1/(self.kappay*self.eps/self.dt+self.sigey/2)
-        self.Czx = (self.kappax*self.eps/self.dt-self.sigex/2)/(self.kappax*self.eps/self.dt+self.sigex/2)
-        self.Dzx = 1/(self.kappax*self.eps/self.dt+self.sigex/2)
+        self.Czy = (self.kappay*self.eps/self.dt-self.sigey/2-self.sigma/2)/(self.kappay*self.eps/self.dt+self.sigey/2+self.sigma/2)
+        self.Dzy = 1/(self.kappay*self.eps/self.dt+self.sigey/2+self.sigma/2)
+        self.Czx = (self.kappax*self.eps/self.dt-self.sigex/2-self.sigma/2)/(self.kappax*self.eps/self.dt+self.sigex/2+self.sigma/2)
+        self.Dzx = 1/(self.kappax*self.eps/self.dt+self.sigex/2+self.sigma/2)
         
     def add_source(self,xs,ys,J0,tc,width,Wc):
         self.xs = xs
@@ -82,10 +83,14 @@ class Yee:
         
     def add_recorder(self,xr,yr):
         self.xr = xr
-        self.yr = yr
+        self.yr = self.Ny-yr
         self.recorded_Ez = []
         
     def add_material(self,x_start,x_end,y_start,y_end,eps_r,mu_r,sigma):
+        self.x_start = x_start
+        self.x_end = x_end
+        self.y_start = y_start
+        self.y_end = y_end
         self.eps[x_start:x_end,y_start:y_end] = eps_r
         self.mu[x_start:x_end,y_start:y_end] = mu_r
         self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
@@ -182,23 +187,32 @@ class Yee:
             
     def animate(self,speed=1,repeat=False):
         fig, ax = plt.subplots()
-        im = ax.imshow(self.Ez.T,cmap='RdBu_r',extent=(0,self.L,0,self.L),vmin=-1,vmax=1)
+        im = ax.imshow(self.Ez.T,cmap='RdBu_r',extent=(0,self.L,0,self.L),vmin=-0.3,vmax=0.3)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_xlim(0,self.L)
         ax.set_ylim(0,self.L)
-        ax.set_title('Ez')
         source_marker, = ax.plot(sum(self.dx[:self.xs]), self.L-sum(self.dy[:self.ys]), 'o', color='black', label='source', markersize=2, zorder=3)
-        rec1, = ax.plot(sum(self.dx[:self.xr]), sum(self.dy[:self.yr]), 'x', color='red', label='recorder 1', zorder=3, markersize=6)
+        rec1, = ax.plot(sum(self.dx[:self.xr]), self.L-sum(self.dy[:self.yr]), 'x', color='red', label='recorder 1', zorder=3, markersize=6)
         def update(frame):
             self.update_loop(speed)
             im.set_data(self.Ez.T)
+            ax.set_title('Ez at t = {:.2f} s'.format(self.n*self.dt))
             return [im,source_marker,rec1]
         
         ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt * 1000), repeat=repeat)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="3%", pad=0.05)
         cb = fig.colorbar(im, cax=cax, label='Ez [V/m]')
+        if hasattr(self, 'x_start'):
+            x_left = sum(self.dx[:self.x_start])
+            x_right = sum(self.dx[:self.x_end])
+            width = x_right - x_left
+            y_bottom = self.L - sum(self.dy[:self.y_end])
+            y_top = self.L - sum(self.dy[:self.y_start])
+            height = y_top - y_bottom
+            rect = Rectangle((x_left, y_bottom), width, height, linewidth=1, edgecolor='black', facecolor='none')
+            ax.add_patch(rect)
         ax.legend(loc='upper left')
         plt.show()
         
@@ -207,6 +221,6 @@ class Yee:
         plt.plot(np.arange(self.n)*self.dt, self.recorded_Ez)
         plt.xlabel('Time [s]')
         plt.ylabel('Ez at recorder [V/m]')
-        plt.title(f'Recorded Ez at ({round(sum(self.dx[:self.xr]),1)}, {round(sum(self.dy[:self.yr]),1)})')
+        plt.title(f'Recorded Ez at ({round(sum(self.dx[:self.xr]),2)}, {round(self.L-sum(self.dy[:self.yr]),2)})')
         plt.grid()
         plt.show()

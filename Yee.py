@@ -10,7 +10,7 @@ CFL = 0.9
 dt = CFL/c/np.sqrt(1/(L/Nx)**2+1/(L/Ny)**2)
 J0 = 10
 Wc = 0.35/dt
-width = 2/Wc
+width = 5/Wc
 tc = 5*width
 Nt = int(20*tc/dt)
 
@@ -39,16 +39,31 @@ m = 4
 ###
 # With PML
 ###
+# solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
+# solver.add_source(xs,ys,J0,tc,width,Wc)
+# solver.add_recorder(xr,yr)
+
+# # solver.show_PML() # PML profiles
+
+# solver.animate(speed = 10)
+# solver.restart()
+
+# solver.update_loop()
+# solver.show_recorder()
+# solver.restart()
+
+###
+# With matreial
+###
+
 solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
 solver.add_source(xs,ys,J0,tc,width,Wc)
 solver.add_recorder(xr,yr)
-
-# solver.show_PML() # PML profiles
+solver.add_material(3*Nx//4,4*Nx//5,Ny//4,3*Ny//4,eps_r=1,mu_r=1,sigma=40000000)
 
 solver.animate(speed = 10)
 solver.restart()
 
-solver.update_loop()
-solver.show_recorder()
-solver.restart()
-
+# solver.update_loop()
+# solver.show_recorder()
+# solver.restart()
