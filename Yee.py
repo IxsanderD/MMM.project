@@ -19,7 +19,7 @@ ys = Ny//3
 xr = Nx//2
 yr = Ny//2
 
-N_PML = 30
+N_PML = 20
 m = 4
 
 ###
