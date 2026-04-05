@@ -9,7 +9,7 @@ c = 1
 CFL = 0.9
 dt = CFL/c/np.sqrt(1/(L/Nx)**2+1/(L/Ny)**2)
 J0 = 10
-Wc = 0.2/dt
+Wc = 0.35/dt
 width = 2/Wc
 tc = 5*width
 Nt = int(20*tc/dt)
@@ -43,7 +43,7 @@ solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
 solver.add_source(xs,ys,J0,tc,width,Wc)
 solver.add_recorder(xr,yr)
 
-solver.show_PML() # PML profile
+# solver.show_PML() # PML profiles
 
 solver.animate(speed = 10)
 solver.restart()

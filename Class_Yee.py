@@ -38,7 +38,7 @@ class Yee:
         self.sigmx = np.zeros((Nx+1,Ny))
         self.sigey = np.zeros((Nx+1,Ny+1))
         self.sigex = np.zeros((Nx+1,Ny+1))
-        self.kappa_max = 6
+        self.kappa_max = 3
         self.kappa = np.array([1+(self.kappa_max-1)*(i/N_PML)**m for i in range(N_PML)])
         self.kappax = np.ones((Nx+1,Ny+1))
         self.kappay = np.ones((Nx+1,Ny+1))
