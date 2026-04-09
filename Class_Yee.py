@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.patches import Rectangle
 
 class Yee:
     def __init__(self,L,Nx,Ny,Nt,dt,N_PML,m,PML=False):
@@ -26,8 +27,6 @@ class Yee:
         self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
         self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
         self.sigma = np.zeros((Nx+1,Ny+1))
-        self.A = (self.eps/self.dt-self.sigma/2)/(self.eps/self.dt+self.sigma/2)
-        self.B = 1/(self.eps/self.dt+self.sigma/2)
         # PML:
         self.PML = PML
         self.sigma_max = 500 #(m+1)/(150*np.pi*self.dx[0])
@@ -38,7 +37,7 @@ class Yee:
         self.sigmx = np.zeros((Nx+1,Ny))
         self.sigey = np.zeros((Nx+1,Ny+1))
         self.sigex = np.zeros((Nx+1,Ny+1))
-        self.kappa_max = 6
+        self.kappa_max = 3
         self.kappa = np.array([1+(self.kappa_max-1)*(i/N_PML)**m for i in range(N_PML)])
         self.kappax = np.ones((Nx+1,Ny+1))
         self.kappay = np.ones((Nx+1,Ny+1))
@@ -60,27 +59,45 @@ class Yee:
         put_pml(self.sigey,self.kappay,'y')
         put_pml(self.sigex,self.kappax,'x')
         
+        self.make_matrices()
+        
+    def make_matrices(self):
+        self.A = (self.eps/self.dt-self.sigma/2)/(self.eps/self.dt+self.sigma/2)
+        self.B = 1/(self.eps/self.dt+self.sigma/2)
         self.Cy = (self.kappax[1:]*self.muy/self.dt-self.sigmy/2)/(self.kappax[1:]*self.muy/self.dt+self.sigmy/2)
         self.Dy = 1/(self.kappax[1:]*self.muy/self.dt+self.sigmy/2)
         self.Cx = (self.kappay[:,1:]*self.mux/self.dt-self.sigmx/2)/(self.kappay[:,1:]*self.mux/self.dt+self.sigmx/2)
         self.Dx = 1/(self.kappay[:,1:]*self.mux/self.dt+self.sigmx/2)
-        self.Czy = (self.kappay*self.eps/self.dt-self.sigey/2)/(self.kappay*self.eps/self.dt+self.sigey/2)
-        self.Dzy = 1/(self.kappay*self.eps/self.dt+self.sigey/2)
-        self.Czx = (self.kappax*self.eps/self.dt-self.sigex/2)/(self.kappax*self.eps/self.dt+self.sigex/2)
-        self.Dzx = 1/(self.kappax*self.eps/self.dt+self.sigex/2)
+        self.Czy = (self.kappay*self.eps/self.dt-self.sigey/2-self.sigma/2)/(self.kappay*self.eps/self.dt+self.sigey/2+self.sigma/2)
+        self.Dzy = 1/(self.kappay*self.eps/self.dt+self.sigey/2+self.sigma/2)
+        self.Czx = (self.kappax*self.eps/self.dt-self.sigex/2-self.sigma/2)/(self.kappax*self.eps/self.dt+self.sigex/2+self.sigma/2)
+        self.Dzx = 1/(self.kappax*self.eps/self.dt+self.sigex/2+self.sigma/2)
         
     def add_source(self,xs,ys,J0,tc,width,Wc):
         self.xs = xs
-        self.ys = ys
+        self.ys = self.Ny-ys
         self.J0 = J0
         self.tc = tc
         self.width = width
         self.Wc = Wc
+        self.source_Ez = []
         
     def add_recorder(self,xr,yr):
         self.xr = xr
-        self.yr = yr
+        self.yr = self.Ny-yr
         self.recorded_Ez = []
+        
+    def add_material(self,x_start,x_end,y_start,y_end,eps_r,mu_r,sigma):
+        self.x_start = x_start
+        self.x_end = x_end
+        self.y_start = y_start
+        self.y_end = y_end
+        self.eps[x_start:x_end,y_start:y_end] = eps_r
+        self.mu[x_start:x_end,y_start:y_end] = mu_r
+        self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
+        self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
+        self.sigma[x_start:x_end,y_start:y_end] = sigma
+        self.make_matrices()
         
     def restart(self):
         self.Ez = np.zeros((self.Nx+1,self.Ny+1))
@@ -120,7 +137,7 @@ class Yee:
             - self.B[1:-1,1:-1]/self.dy_dual[np.newaxis,:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
         )
         # Source:
-        self.Ez[self.xs,self.ys] += self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
+        self.Ez[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
         #Update Hy:
         self.Hy[:,1:-1] = self.Hy[:,1:-1] + self.dt/(self.muy[:,1:-1]*self.dx[:,np.newaxis])*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
         #Update Hx:
@@ -128,6 +145,7 @@ class Yee:
         # Time step:
         self.n += 1
         self.recorded_Ez.append(self.Ez[self.xr,self.yr])
+        self.source_Ez.append(self.Ez[self.xs,self.ys])
     
     def update_PML(self):
         # Update Ez:
@@ -140,8 +158,8 @@ class Yee:
             + self.Dzx[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
         )
         # Source:
-        self.Ezx[self.xs,self.ys] += self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
-        self.Ezy[self.xs,self.ys] += self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        self.Ezx[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        self.Ezy[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
         self.Ez = self.Ezx + self.Ezy
         #Update Hy:
         self.Hy[:,1:-1] = self.Cy[:,1:-1]*self.Hy[:,1:-1] + self.Dy[:,1:-1]/self.dx[:,np.newaxis]*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
@@ -150,6 +168,7 @@ class Yee:
         #Time step:
         self.n += 1
         self.recorded_Ez.append(self.Ez[self.xr,self.yr])
+        self.source_Ez.append(self.Ez[self.xs,self.ys])
     
     def update_loop(self,nt=None):
         if nt is None:
@@ -171,23 +190,32 @@ class Yee:
             
     def animate(self,speed=1,repeat=False):
         fig, ax = plt.subplots()
-        im = ax.imshow(self.Ez.T,cmap='RdBu_r',extent=(0,self.L,0,self.L),vmin=-1,vmax=1)
+        im = ax.imshow(self.Ez.T,cmap='RdBu_r',extent=(0,self.L,0,self.L),vmin=-0.3,vmax=0.3)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_xlim(0,self.L)
         ax.set_ylim(0,self.L)
-        ax.set_title('Ez')
-        source_marker, = ax.plot(sum(self.dx[:self.xs]), 1-sum(self.dy[:self.ys]), 'o', color='black', label='source', markersize=2, zorder=3)
-        rec1, = ax.plot(sum(self.dx[:self.xr]), sum(self.dy[:self.yr]), 'x', color='red', label='recorder 1', zorder=3, markersize=6)
+        source_marker, = ax.plot(sum(self.dx[:self.xs]), self.L-sum(self.dy[:self.ys]), 'o', color='black', label='source', markersize=2, zorder=3)
+        rec1, = ax.plot(sum(self.dx[:self.xr]), self.L-sum(self.dy[:self.yr]), 'x', color='red', label='recorder 1', zorder=3, markersize=6)
         def update(frame):
             self.update_loop(speed)
             im.set_data(self.Ez.T)
+            ax.set_title('Ez at t = {:.2f} s'.format(self.n*self.dt))
             return [im,source_marker,rec1]
         
         ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt * 1000), repeat=repeat)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="3%", pad=0.05)
         cb = fig.colorbar(im, cax=cax, label='Ez [V/m]')
+        if hasattr(self, 'x_start'):
+            x_left = sum(self.dx[:self.x_start])
+            x_right = sum(self.dx[:self.x_end])
+            width = x_right - x_left
+            y_bottom = self.L - sum(self.dy[:self.y_end])
+            y_top = self.L - sum(self.dy[:self.y_start])
+            height = y_top - y_bottom
+            rect = Rectangle((x_left, y_bottom), width, height, linewidth=1, edgecolor='black', facecolor='none')
+            ax.add_patch(rect)
         ax.legend(loc='upper left')
         plt.show()
         
@@ -196,6 +224,6 @@ class Yee:
         plt.plot(np.arange(self.n)*self.dt, self.recorded_Ez)
         plt.xlabel('Time [s]')
         plt.ylabel('Ez at recorder [V/m]')
-        plt.title(f'Recorded Ez at ({round(sum(self.dx[:self.xr]),1)}, {round(sum(self.dy[:self.yr]),1)})')
+        plt.title(f'Recorded Ez at ({round(sum(self.dx[:self.xr]),2)}, {round(self.L-sum(self.dy[:self.yr]),2)})')
         plt.grid()
         plt.show()
