@@ -6,19 +6,18 @@ import time
 
 start=time.perf_counter()
 
-Nx=30
-Ny=30
+Nx=50
+Ny=50
 Nt=100
 dx=np.ones(Nx)
 dy=np.ones(Ny)
-c=1
+c0=1
 eps=np.ones(Nx*Ny)
 mu=np.ones(Nx*Ny)
 J0 = 10
-width = np.sum(dx)/(10*c)
+width = np.sum(dx)/(10*c0)
 tc = 5*width
-Wc = 2*np.pi*0.5/tc
-tf=5*tc
+tf= 5*tc
 dt=tf/Nt
 k_max=1
 sigma_max=0
@@ -30,25 +29,25 @@ solver=FCI(Nx,Ny,Nt,dx,dy,dt,eps,mu,k_max,sigma_max)
 solver.construct_update_matrix()
 end=time.perf_counter()
 print(f"Runtime: {end - start:.6f} seconds")
-solver.add_source(xs,ys,J0,tc,width,Wc)
+solver.add_source(xs,ys,J0,tc,width)
 solver.add_recorder(xs,ys)
 # solver.update_loop()
 # solver.show_recorder()
-# solver.animate()
+solver.animate()
 
 import plotly.express as px
 
 # Example matrix (replace with your own)
-matrix = solver.left_matrix.toarray()
+# matrix = solver.left_matrix.toarray()
 
-fig = px.imshow(
-    matrix,
-    color_continuous_scale='viridis',
-    aspect='auto'
-)
+# fig = px.imshow(
+#     matrix,
+#     color_continuous_scale='viridis',
+#     aspect='auto'
+# )
 
-fig.update_traces(
-    hovertemplate="Row: %{y}<br>Col: %{x}<br>Value: %{z}<extra></extra>"
-)
+# fig.update_traces(
+#     hovertemplate="Row: %{y}<br>Col: %{x}<br>Value: %{z}<extra></extra>"
+# )
 
-fig.show()
+# fig.show()
