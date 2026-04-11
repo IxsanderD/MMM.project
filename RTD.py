@@ -4,7 +4,7 @@ from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.patches import Rectangle
 from Class_RTD import RTD
-from astropy.constants.astropyconst20 import m_e,hbar
+from astropy.constants.astropyconst20 import m_e,hbar,e
 
 a = 15
 b = 5
@@ -17,9 +17,11 @@ dt = 0.7*2/(2*hbar.value/(0.023*m_e.value*dx**2)+0/hbar.value)
 x0 = Lx/2
 sigma_x = x0/20
 
-kx = 2
+m_eff = 0.023*m_e.value
+E = 8*e.value
+kx = np.sqrt(2*m_eff*E/hbar.value**2)/1e9 # in 1/nm
 sigma = 4e-36
-k = 3
+k = 3 # exponent for the absorbing boundary strength
 N_layer = 80
 
 m = 1
