@@ -20,7 +20,7 @@ tc = 5*width
 tf= 5*tc
 dt=tf/Nt
 k_max=1
-sigma_max=0
+sigma_max=1
 
 xs = Nx//2
 ys = Ny//2

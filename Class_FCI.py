@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.sparse import csr_array, diags, eye, kron, block_diag
-from scipy.sparse.linalg import spsolve, splu
+from scipy.sparse.linalg import spsolve, lsqr
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -200,26 +200,28 @@ class FCI:
         # self.right_matrix[3*self.Nx*self.Ny:,:3*self.Nx*self.Ny]=A_10_r
         # del A_10_r
 
-        self.left_matrix[0,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==0,1,0) # Moeten velden ergens pinnen zodat matrix niet singulier wordt
-        self.right_matrix[0,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==0,1,0)
-        self.left_matrix[self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==self.Nx*self.Ny,1,0)
-        self.right_matrix[self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==self.Nx*self.Ny,1,0)
-        self.left_matrix[2*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==2*self.Nx*self.Ny,1,0)
-        self.right_matrix[2*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==2*self.Nx*self.Ny,1,0)
-        self.left_matrix[3*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==3*self.Nx*self.Ny,1,0)
-        self.right_matrix[3*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==3*self.Nx*self.Ny,1,0)
-        self.left_matrix[4*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==4*self.Nx*self.Ny,1,0)
-        self.right_matrix[4*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==4*self.Nx*self.Ny,1,0)
-        self.left_matrix[5*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==5*self.Nx*self.Ny,1,0)
-        self.right_matrix[5*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==5*self.Nx*self.Ny,1,0)
+        # self.left_matrix[0,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==0,1,0) # Moeten velden ergens pinnen zodat matrix niet singulier wordt
+        # self.right_matrix[0,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==0,1,0)
+        # self.left_matrix[self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==self.Nx*self.Ny,1,0)
+        # self.right_matrix[self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==self.Nx*self.Ny,1,0)
+        # self.left_matrix[2*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==2*self.Nx*self.Ny,1,0)
+        # self.right_matrix[2*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==2*self.Nx*self.Ny,1,0)
+        # self.left_matrix[3*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==3*self.Nx*self.Ny,1,0)
+        # self.right_matrix[3*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==3*self.Nx*self.Ny,1,0)
+        # self.left_matrix[4*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==4*self.Nx*self.Ny,1,0)
+        # self.right_matrix[4*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==4*self.Nx*self.Ny,1,0)
+        # self.left_matrix[5*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==5*self.Nx*self.Ny,1,0)
+        # self.right_matrix[5*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==5*self.Nx*self.Ny,1,0)
 
     def restart(self):
         self.all_fields=np.zeros(6*self.Nx*self.Ny)
         self.n=0
     
     def update(self):
-        self.source[self.Nx*self.Ny+self.xs*self.Ny+self.ys]=np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
-        self.all_fields=spsolve(self.left_matrix,self.right_matrix@self.all_fields-self.source)
+        self.source[self.Nx*self.Ny+self.xs*self.Ny+self.ys]=self.J0*np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
+        b=self.right_matrix@self.all_fields+self.source
+        data=lsqr(self.left_matrix,b)
+        self.all_fields=data[0]
         self.n+=1
         Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
         self.recorded_Ez.append(Ez[self.xr,self.yr])
@@ -247,7 +249,7 @@ class FCI:
             return [im,source_marker]
         
         ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt), repeat=repeat, blit=True)
-        # ani.save("simulation.gif", writer="pillow", fps=10)
+        ani.save("simulation.gif", writer="pillow", fps=10)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="3%", pad=0.05)
         cb = fig.colorbar(im, cax=cax, label='Ez [V/m]')
