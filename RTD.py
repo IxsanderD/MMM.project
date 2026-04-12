@@ -18,15 +18,16 @@ dt = 0.7*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
 x0 = a/3
 sigma_x = a/10
 
-m_eff = 0.023*m_e.value
-E = 6*e.value*10**(-18)
-kx = np.sqrt(2*m_eff*E/hbar.value**2) # in 1/nm
-sigma = 6*E
-k = 3 # exponent for the absorbing boundary strength
-N_layer = 100
+m = 20
+n = 20
 
-m = 1
-n = 1
+m_eff = 0.023*m_e.value
+E = hbar.value**2/(2*m_eff)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
+print(f'Energy: {E/e.value*10**18:.2f} eV')
+kx = np.sqrt(2*m_eff*E/hbar.value**2) # in 1/nm
+sigma = 5*E
+k = 3 # exponent for the absorbing boundary strength
+N_layer = 200
 
 ###
 # Without Absorbing Boundaries:
@@ -46,9 +47,9 @@ n = 1
 # With potential barriers:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
-# solver.add_barriers(U0)
-# solver.animate(m,n)
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+solver.add_barriers(U0)
+solver.animate(m,n)
 
 ###
 # Validation with analytical solution:
@@ -57,4 +58,5 @@ n = 1
 solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
 solver.add_barriers(U0)
 
-solver.analytical_T()
+T_ana = solver.analytical_T()
+print(T_ana)
