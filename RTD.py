@@ -47,9 +47,9 @@ N_layer = 200
 # With potential barriers:
 ###
 
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
-solver.add_barriers(U0)
-solver.animate(m,n)
+# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+# solver.add_barriers(U0)
+# solver.animate(m,n)
 
 ###
 # Validation with analytical solution:
@@ -58,5 +58,9 @@ solver.animate(m,n)
 solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
 solver.add_barriers(U0)
 
-T_ana = solver.analytical_T()
-print(T_ana)
+E,T_ana = solver.analytical_T()
+plt.plot(E/e.value*10**18,T_ana,label='Analytical')
+plt.xlabel('Energy [eV]')
+plt.ylabel('Transmission')
+plt.legend()
+plt.show()

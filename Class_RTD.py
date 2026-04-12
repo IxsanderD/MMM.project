@@ -50,6 +50,7 @@ class RTD:
         return res
     
     def add_barriers(self,U0):
+        self.U0 = U0
         self.U[int(self.a//self.dx):int((self.a+self.b)//self.dx)] = U0
         self.U[int((2*self.a+self.b)//self.dx):int((2*self.a+2*self.b)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2)
@@ -115,9 +116,15 @@ class RTD:
         plt.show()
         
     def analytical_T(self): # Should be function of E... Use Fourier to find numerical T(E)
-        M12 = 1/2*np.array([[1+self.Kx/self.kx,1-self.Kx/self.kx],[1-self.Kx/self.kx,1+self.Kx/self.kx]])
-        M23 = 1/2*np.array([[1+self.kx/self.Kx,1-self.kx/self.Kx],[1-self.kx/self.Kx,1+self.kx/self.Kx]])
-        M1 = np.array([[np.exp(-1j*self.kx*self.a),0],[0,np.exp(1j*self.kx*self.a)]])
-        M2 = np.array([[np.exp(-1j*self.Kx*self.b),0],[0,np.exp(1j*self.Kx*self.b)]])
-        M = M12@M2@M23@M1@M12@M2@M23
-        return 1/np.abs(M[0,0])**2
+        E_array = np.linspace(1.01*self.U0,self.U0*10,1000)
+        kx_array = np.sqrt(2*self.m*E_array/self.hbar**2)
+        Kx_array = np.sqrt(2*self.m*(E_array-self.U0)/self.hbar**2)
+        T = []
+        for kx,Kx in zip(kx_array,Kx_array):
+            M12 = 1/2*np.array([[1+Kx/kx,1-Kx/kx],[1-Kx/kx,1+Kx/kx]])
+            M23 = 1/2*np.array([[1+kx/Kx,1-kx/Kx],[1-kx/Kx,1+kx/Kx]])
+            M1 = np.array([[np.exp(-1j*kx*self.a),0],[0,np.exp(1j*Kx*self.a)]])
+            M2 = np.array([[np.exp(-1j*Kx*self.b),0],[0,np.exp(1j*Kx*self.b)]])
+            M = M12@M2@M23@M1@M12@M2@M23
+            T.append(1/np.abs(M[0,0])**2)
+        return E_array,np.array(T)
