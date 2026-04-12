@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from astropy.constants.astropyconst20 import m_e,hbar
+from astropy.constants.astropyconst20 import m_e,hbar,e
 
 class RTD:
     def __init__(self,dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True):
@@ -17,6 +17,7 @@ class RTD:
         self.x0 = x0
         self.sigma_x = sigma_x
         self.kx = kx
+        self.Energy = hbar.value**2*kx**2/(2*0.023*m_e.value)
         self.Nx = int(self.Lx//self.dx)
         self.Nt = int(self.t_max//self.dt)
         self.C = 1/np.sqrt(np.sqrt(2*np.pi)*self.sigma_x)
@@ -50,6 +51,18 @@ class RTD:
     
     def E(self,m,n):
         return self.hbar**2/(2*self.m)*((np.pi*n/self.Ly)**2+(np.pi*m/self.Lz)**2)
+    
+    def add_barriers(self,U0):
+        self.U[int(self.a//self.dx):int((self.a+self.b)//self.dx)] = U0
+        self.U[int((2*self.a+self.b)//self.dx):int((2*self.a+2*self.b)//self.dx)] = U0
+        self.Kx = np.sqrt(2*self.m*(self.Energy-U0)/self.hbar**2)
+        
+    def plot_potential(self):
+        plt.plot(np.arange(self.Nx)*self.dx,self.U)
+        plt.xlabel('x')
+        plt.ylabel('U')
+        plt.xlim(0,self.Lx)
+        plt.show()
         
     def update_2(self,m,n):
         if self.n==0:
@@ -75,9 +88,10 @@ class RTD:
     #         self.update_4(m,n)
     
     def animate(self,m,n,speed=1,repeat=False):
-        fig, ax = plt.subplots()
+        fig, axes = plt.subplots(2,1)
+        ax = axes[0]
+        ax2 = axes[1]
         im = ax.plot(np.arange(self.Nx)*self.dx,self.psi_Re**2+self.psi_Im**2)[0]
-        ax.set_xlabel('x')
         ax.set_ylabel(r'$|\psi|^2$')
         ax.set_xlim(0,self.Lx)
         ax.set_ylim(0,self.C**2)
@@ -88,6 +102,10 @@ class RTD:
             return [im]
         
         ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt * 1000), repeat=repeat)
+        ax2.plot(np.arange(self.Nx)*self.dx,self.U/e.value*10**18)
+        ax2.set_xlabel('x [nm]')
+        ax2.set_ylabel('U [eV]')
+        ax2.set_xlim(0,self.Lx)
         plt.show()
         
     def show_psi(self):
@@ -98,3 +116,11 @@ class RTD:
         plt.xlim(0,self.Lx)
         plt.legend()
         plt.show()
+        
+    def analytical_T(self):
+        M12 = 1/2*np.array([[1+self.Kx/self.kx,1-self.Kx/self.kx],[1-self.Kx/self.kx,1+self.Kx/self.kx]])
+        M23 = 1/2*np.array([[1+self.kx/self.Kx,1-self.kx/self.Kx],[1-self.kx/self.Kx,1+self.kx/self.Kx]])
+        M1 = np.array([[np.exp(-1j*self.kx*self.a),0],[0,np.exp(1j*self.kx*self.a)]])
+        M2 = np.array([[np.exp(-1j*self.Kx*self.b),0],[0,np.exp(1j*self.Kx*self.b)]])
+        M = M12@M2@M23@M1@M12@M2@M23
+        print(M)
