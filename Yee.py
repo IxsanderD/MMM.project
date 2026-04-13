@@ -9,7 +9,7 @@ Ny = 300
 c = 1
 CFL = 0.9
 dt = CFL/c/np.sqrt(1/(L/Nx)**2+1/(L/Ny)**2)
-J0 = 100
+J0 = 10000
 Wc = 0.35/dt
 width = 5/Wc
 tc = 5*width
@@ -63,45 +63,43 @@ solver.add_recorder(xr,yr)
 solver.update_loop()
 
 # Plot time domain response
-plt.plot(solver.recorded_Ez, label='Simulated recorder')
-# plt.plot(solver.source_Ez, label='Source')
-plt.plot(solver.applied_source, label='Applied source')
-plt.xlabel('Time (s)')
-plt.ylabel('|E_z|')
-plt.legend()
-plt.show()
+# plt.plot(solver.recorded_Ez, label='Simulated recorder')
+# plt.plot(solver.applied_source, label='Applied source')
+# plt.xlabel('Time (s)')
+# plt.ylabel('|E_z|')
+# plt.legend()
+# plt.title('Time domain response')
+# plt.show()
 
-E_freq_sim = np.fft.fft(solver.recorded_Ez)
-E_freq_source = np.fft.fft(solver.source_Ez)
-E_freq_applied = np.fft.fft(solver.applied_source)
-freq = np.fft.fftfreq(len(solver.recorded_Ez), dt)
-
-E_freq_sim = E_freq_sim[:len(E_freq_sim)//2]
-E_freq_source = E_freq_source[:len(E_freq_source)//2]
-E_freq_applied = E_freq_applied[:len(E_freq_applied)//2]
-omega = 2*np.pi*freq[:len(freq)//2]
+E_freq_sim = np.fft.rfft(solver.recorded_Ez)*dt
+source_freq = np.fft.rfft(solver.applied_source)*dt
+omega = 2*np.pi*np.fft.rfftfreq(len(solver.recorded_Ez), dt)
 
 E_freq_ana = -J0*omega/4*hankel2(0, omega/c*np.sqrt((xr-xs)**2+(yr-ys)**2))
 
 # Restrict to bandwidth of the source
-E_max = np.max(np.abs(E_freq_applied))
-mask = np.abs(E_freq_applied) > 0.005*E_max
+E_max = np.max(np.abs(source_freq))
+mask = np.abs(source_freq) > 0.005*E_max
+
+# Rescale
+index = len(omega[mask])//2
+E_freq_sim *= np.abs(E_freq_ana[index]/J0)/np.abs(E_freq_sim[index]/source_freq[index])
 
 # Plot frequency domain response
 plt.plot(omega[mask], np.abs(E_freq_sim)[mask], label='Simulated recorder')
-# plt.plot(omega[mask], np.abs(E_freq_source)[mask], label='Source')
-plt.plot(omega[mask], np.abs(E_freq_applied)[mask], label='Applied source')
+plt.plot(omega[mask], np.abs(source_freq)[mask], label='Applied source')
 plt.xlabel('Frequency (rad/s)')
 plt.ylabel('|E_z|')
 plt.legend()
+plt.title('Frequency domain response')
 plt.show()
 
-# plt.plot(omega[mask], np.abs(E_freq_sim/E_freq_source)[mask], label='Numerical response to field')
-plt.plot(omega[mask], np.abs(E_freq_sim/E_freq_applied)[mask], label='Numerical response to applied source')
+plt.plot(omega[mask], np.abs(E_freq_sim/source_freq)[mask], label='Numerical response to applied source')
 plt.plot(omega[mask], np.abs(E_freq_ana/J0)[mask], label='Analytical response')
 plt.xlabel('Frequency (rad/s)')
 plt.ylabel('|E_z|')
 plt.legend()
+plt.title('Frequency response comparison')
 plt.show()
 
 ###
