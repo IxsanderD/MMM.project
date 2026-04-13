@@ -10,7 +10,7 @@ class RTD:
         self.dt = dt
         self.a = a
         self.b = b
-        self.Lx = 3*a+2*b
+        self.Lx = 3*a+2*b+20
         self.Ly = Ly
         self.Lz = Lz
         self.t_max = t_max
@@ -32,6 +32,12 @@ class RTD:
         if ABC:
             self.U_Im[:N_layer] += np.array([sigma*(i/N_layer)**k for i in range(N_layer-1,-1,-1)])
             self.U_Im[-N_layer:] += np.array([sigma*(i/N_layer)**k for i in range(N_layer)])
+    
+    def restart(self):
+        self.psi_Re = np.zeros(self.Nx)
+        self.psi_Im = np.zeros(self.Nx)
+        self.psi_record = []
+        self.n = 0
         
     def deriv2_2(self,psi):
         res = np.zeros_like(psi)
@@ -62,6 +68,16 @@ class RTD:
         plt.xlim(0,self.Lx)
         plt.show()
         
+    def add_recorder(self,xr):
+        self.xr = xr
+        self.psi_record = []
+    
+    def show_recorder(self):
+        plt.plot(np.arange(len(self.psi_record))*self.dt,self.psi_record)
+        plt.xlabel('Time')
+        plt.ylabel(r'$|\psi(x_r)|^2$')
+        plt.show()
+        
     def update_2(self):
         if self.n==0:
             self.psi_Re = np.array([self.C*np.cos(self.kx*i*self.dx)*np.exp(-(i*self.dx-self.x0)**2/(4*self.sigma_x**2)) for i in range(self.Nx)])
@@ -72,6 +88,7 @@ class RTD:
         self.psi_Im += (self.hbar*self.dt/(2*self.m)*self.deriv2_2(self.psi_Re)
                               - self.dt/self.hbar*(self.U+self.E)*self.psi_Re
                               - self.dt/self.hbar*self.U_Im*self.psi_Im)
+        self.psi_record.append(self.psi_Re[int(self.xr//self.dx)]**2+self.psi_Im[int(self.xr//self.dx)]**2)
         self.n += 1
     
     # def update_4(self,m,n):
@@ -86,24 +103,27 @@ class RTD:
     #         self.update_4()
     
     def animate(self,speed=1,repeat=False):
-        fig, axes = plt.subplots(2,1)
+        fig, axes = plt.subplots(2,1,figsize=(8,6),gridspec_kw={'height_ratios':[3,1]})
         ax = axes[0]
         ax2 = axes[1]
         im = ax.plot(np.arange(self.Nx)*self.dx,self.psi_Re**2+self.psi_Im**2)[0]
         ax.set_ylabel(r'$|\psi|^2$')
         ax.set_xlim(0,self.Lx)
         ax.set_ylim(0,self.C**2)
+        ax.plot(self.xr,self.C**2/10,'ro',label='Recorder')
         def update(frame):
-            self.update_loop_2()
+            for _ in range(speed):
+                self.update_2()
             im.set_data(np.arange(self.Nx)*self.dx,self.psi_Re**2+self.psi_Im**2)
-            ax.set_title('Probability density')
             return [im]
         
-        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt * 1000), repeat=repeat)
+        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt*1000), repeat=repeat)
         ax2.plot(np.arange(self.Nx)*self.dx,self.U/e.value*10**18)
         ax2.set_xlabel('x [nm]')
         ax2.set_ylabel('U [eV]')
         ax2.set_xlim(0,self.Lx)
+        plt.tight_layout()
+        ax.legend()
         plt.show()
         
     def show_psi(self):

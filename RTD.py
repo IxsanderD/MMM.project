@@ -8,15 +8,16 @@ from astropy.constants.astropyconst20 import m_e,hbar,e
 
 a = 15
 b = 5
-Lx = 3*a+2*b
+Lx = 3*a+2*b+10 # Extra space for barrier to not have an influence
 Ly = 40
 Lz = Ly
 dx = Lx/3000
-t_max = 100
+t_max = 10000
 U0 = 0.6*e.value*10**(-18)
 dt = 0.7*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
 x0 = a/3
 sigma_x = a/10
+xr = 7*a/3+2*b
 
 m = 20
 n = 20
@@ -27,29 +28,37 @@ print(f'Energy: {E/e.value*10**18:.2f} eV')
 kx = np.sqrt(2*m_eff*E/hbar.value**2) # in 1/nm
 sigma = 5*E
 k = 3 # exponent for the absorbing boundary strength
-N_layer = 200
+N_layer = 150
 
 ###
 # Without Absorbing Boundaries:
 ###
 
 # solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=False)
-# solver.animate(m,n)
+# solver.add_recorder(xr)
+# solver.animate(speed = 1000)
 
 ###
 # With Absorbing Boundaries:
 ###
 
 # solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
-# solver.animate(m,n)
+# solver.add_recorder(xr)
+# solver.animate(speed = 1000)
 
 ###
 # With potential barriers:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
-# solver.add_barriers(U0)
-# solver.animate(m,n)
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+
+solver.add_barriers(U0)
+solver.add_recorder(xr)
+solver.animate(speed = 1000)
+
+solver.restart()
+solver.update_loop_2()
+solver.show_recorder()
 
 ###
 # Validation with analytical solution:
