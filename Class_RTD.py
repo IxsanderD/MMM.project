@@ -36,7 +36,10 @@ class RTD:
     def restart(self):
         self.psi_Re = np.zeros(self.Nx)
         self.psi_Im = np.zeros(self.Nx)
-        self.psi_record = []
+        self.psiRe_record_left = []
+        self.psiRe_record_right = []
+        self.psiIm_record_left = []
+        self.psiIm_record_right = []
         self.n = 0
         
     def deriv2_2(self,psi):
@@ -70,12 +73,17 @@ class RTD:
         
     def add_recorder(self,xr):
         self.xr = xr
-        self.psi_record = []
+        self.psiRe_record_left = []
+        self.psiRe_record_right = []
+        self.psiIm_record_left = []
+        self.psiIm_record_right = []
     
     def show_recorder(self):
-        plt.plot(np.arange(len(self.psi_record))*self.dt,self.psi_record)
-        plt.xlabel('Time')
+        plt.plot(np.arange(len(self.psiRe_record_left))*self.dt,np.array(self.psiRe_record_left),label='Re')
+        plt.plot(np.arange(len(self.psiIm_record_left))*self.dt,np.array(self.psiIm_record_left),label='Im')
+        plt.xlabel('Time [s]')
         plt.ylabel(r'$|\psi(x_r)|^2$')
+        plt.legend()
         plt.show()
         
     def update_2(self):
@@ -88,7 +96,10 @@ class RTD:
         self.psi_Im += (self.hbar*self.dt/(2*self.m)*self.deriv2_2(self.psi_Re)
                               - self.dt/self.hbar*(self.U+self.E)*self.psi_Re
                               - self.dt/self.hbar*self.U_Im*self.psi_Im)
-        self.psi_record.append(self.psi_Re[int(self.xr//self.dx)]**2+self.psi_Im[int(self.xr//self.dx)]**2)
+        self.psiRe_record_left.append(self.psi_Re[int(self.xr//self.dx)])
+        self.psiIm_record_left.append(self.psi_Im[int(self.xr//self.dx)])
+        self.psiRe_record_right.append(self.psi_Re[int(self.xr//self.dx+1)])
+        self.psiIm_record_right.append(self.psi_Im[int(self.xr//self.dx+1)])
         self.n += 1
     
     # def update_4(self,m,n):
@@ -148,3 +159,10 @@ class RTD:
             M = M12@M2@M23@M1@M12@M2@M23
             T.append(1/np.abs(M[0,0])**2)
         return E_array,np.array(T)
+    
+    def J_time(self):
+        N = 1000/(self.Ly*self.Lz)
+        J = []
+        for i in range(self.Nt):
+            J.append(self.psi)
+        return N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
