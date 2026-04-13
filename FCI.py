@@ -6,14 +6,14 @@ import time
 
 start=time.perf_counter()
 
-Nx=50
-Ny=50
+Nx=70
+Ny=70
 Nt=100
 dx=np.ones(Nx)
 dy=np.ones(Ny)
 c0=1
-eps=np.ones(Nx*Ny)
-mu=np.ones(Nx*Ny)
+eps=1
+mu=1
 J0 = 10
 width = np.sum(dx)/(10*c0)
 tc = 5*width
@@ -26,6 +26,7 @@ xs = Nx//2
 ys = Ny//2
 
 solver=FCI(Nx,Ny,Nt,dx,dy,dt,eps,mu,k_max,sigma_max)
+solver.add_material(3*Nx//5,4*Nx//5,3*Ny//5,4*Ny//5,2,2,1)
 solver.construct_update_matrix()
 end=time.perf_counter()
 print(f"Runtime: {end - start:.6f} seconds")
