@@ -18,8 +18,8 @@ x0 = a/3
 sigma_x = a/10
 xr = 7*a/3+2*b
 
-m = 30
-n = 30
+m = 20
+n = 20
 
 m_eff = 0.023*m_e.value
 E = hbar.value**2/(2*m_eff)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
@@ -60,6 +60,14 @@ solver.animate(speed = speed)
 solver.restart()
 solver.update_loop_2()
 solver.show_recorder()
+
+# Current density:
+
+t, J = solver.J_time()
+plt.plot(t,J)
+plt.xlabel('Time [s]')
+plt.ylabel('Current density')
+plt.show()
 
 ###
 # Validation with analytical solution:

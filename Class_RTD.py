@@ -161,8 +161,11 @@ class RTD:
         return E_array,np.array(T)
     
     def J_time(self):
-        N = 1000/(self.Ly*self.Lz)
-        J = []
-        for i in range(self.Nt):
-            J.append(self.psi)
-        return N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
+        N = 1e26/(self.Ly*self.Lz)
+        Re_left = np.array(self.psiRe_record_left)
+        Im_left = np.array(self.psiIm_record_left)
+        Re_right = np.array(self.psiRe_record_right)
+        Im_right = np.array(self.psiIm_record_right)
+        J = Re_left*Im_right - Im_left*Re_right
+        t = np.arange(len(J))*self.dt
+        return t, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
