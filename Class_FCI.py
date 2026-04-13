@@ -1,9 +1,10 @@
 import numpy as np
-from scipy.sparse import csr_array, diags, eye, kron, block_diag
-from scipy.sparse.linalg import spsolve, lsqr
+from scipy.sparse import csr_array, diags, eye, kron
+from scipy.sparse.linalg import lsqr
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import time
 
 class FCI:
     def __init__(self,Nx,Ny,Nt,dx,dy,dt,eps,mu,k_max,sigma_max):
@@ -18,8 +19,9 @@ class FCI:
         self.all_fields=np.zeros(6*Nx*Ny) # Voor ordening, kijk pagina 14 van de cursus
         self.source=np.zeros(6*Nx*Ny)
         self.source_index=[]
-        self.eps=eps # Zelfde ordening als velden
-        self.mu=mu # Zelfde ordening als velden
+        self.eps=eps*np.ones(self.Nx*self.Ny) # Zelfde ordening als velden
+        self.mu=mu*np.ones(self.Nx*self.Ny) # Zelfde ordening als velden
+        self.sigma=np.zeros(self.Nx*self.Ny)
         self.n=0
         self.kmax=k_max
         self.sigmamax=sigma_max
@@ -35,6 +37,19 @@ class FCI:
         self.xr = xr
         self.yr = yr
         self.recorded_Ez = []
+
+    def add_material(self,x_start,x_end,y_start,y_end,eps_r,mu_r,sigma):
+        eps=np.reshape(self.eps,(self.Nx,self.Ny))
+        eps[x_start:x_end,y_start:y_end]=eps_r*self.eps[0]
+        self.eps=np.ravel(eps)
+
+        mu=np.reshape(self.mu,(self.Nx,self.Ny))
+        mu[x_start:x_end,y_start:y_end]=mu_r*self.mu[0]
+        self.mu=np.ravel(mu)
+
+        sig=np.reshape(self.sigma,(self.Nx,self.Ny))
+        sig[x_start:x_end,y_start:y_end]=sigma
+        self.sigma=np.ravel(sig)
     
     def construct_update_matrix(self):
         Dx=-diags(np.ones(self.Nx),offsets=0,format='csr')+diags(np.ones(self.Nx-1),offsets=1,format='csr')+diags(np.ones(1),offsets=-self.Nx+1,format='csr')
@@ -73,21 +88,11 @@ class FCI:
         eps=diags(self.eps,offsets=0,format='csr')
         eps_inv=diags(1/self.eps,offsets=0,format='csr')
         mu=diags(self.mu,offsets=0,format='csr')
+        sigma=diags(self.sigma,offsets=0,format='csr')
 
         A_x=kron(np.eye(self.Nx),Ay,format='csr')
         A_y=kron(Ax,np.eye(self.Ny),format='csr')
         A_z=kron(Ax,Ay,format='csr')
-
-        # delta_x_dual=diags(self.dx_dual,offsets=0,format='csr')
-        # delta_y_dual=diags(self.dy_dual,offsets=0,format='csr')
-
-        # delta_dual=csr_array((2*self.Nx*self.Ny,2*self.Nx*self.Ny))
-        # delta_dual[:self.Nx*self.Ny,:self.Nx*self.Ny]=kron(delta_x_dual,np.eye(self.Ny),format='csr')
-        # delta_dual[self.Nx*self.Ny:,self.Nx*self.Ny:]=kron(np.eye(self.Nx),delta_y_dual,format='csr')
-
-        # Als we anisotrope media gaan bestuderen hebben we deze nodig, maar nu nog niet
-        # delta_dual_inv=np.zeros((2*self.Nx*self.Ny,2*self.Nx*self.Ny))
-        # delta_dual_inv[diags_indices_from(delta_dual_inv)]=1/delta_dual[diags_indices_from(delta_dual)]
 
         self.left_matrix=csr_array((6*self.Nx*self.Ny,6*self.Nx*self.Ny))
         self.right_matrix=csr_array((6*self.Nx*self.Ny,6*self.Nx*self.Ny))
@@ -101,8 +106,8 @@ class FCI:
         self.right_matrix[:self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=A_z/self.dt
 
         # block (1,1)
-        self.left_matrix[self.Nx*self.Ny:2*self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=A_z@(eps@K_x/self.dt+sigma_x/2)
-        self.right_matrix[self.Nx*self.Ny:2*self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=A_z@(eps@K_x/self.dt-sigma_x/2)
+        self.left_matrix[self.Nx*self.Ny:2*self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=A_z@(eps@K_x/self.dt+sigma_x/2+sigma/2)
+        self.right_matrix[self.Nx*self.Ny:2*self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=A_z@(eps@K_x/self.dt-sigma_x/2-sigma/2)
 
         # block (1,2)
         self.left_matrix[self.Nx*self.Ny:2*self.Nx*self.Ny,2*self.Nx*self.Ny:3*self.Nx*self.Ny]=kron(Ax,delta_y_inv@Dy,format='csr')/2
@@ -144,75 +149,6 @@ class FCI:
         self.left_matrix[5*self.Nx*self.Ny:,5*self.Nx*self.Ny:]=A_y@mu/self.dt
         self.right_matrix[5*self.Nx*self.Ny:,5*self.Nx*self.Ny:]=A_y@mu/self.dt
 
-        # star_c_o_curl_10=csr_array((2*self.Nx*self.Ny,self.Nx*self.Ny))
-        # star_c_o_curl_10[:self.Nx*self.Ny,:]=kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')
-        # star_c_o_curl_10[self.Nx*self.Ny:,:]=kron(-delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')
-        # self.left_matrix[self.Nx*self.Ny:3*self.Nx*self.Ny,:self.Nx*self.Ny]=star_c_o_curl_10/2
-        # self.right_matrix[self.Nx*self.Ny:3*self.Nx*self.Ny,:self.Nx*self.Ny]=-star_c_o_curl_10/2
-        # del star_c_o_curl_10
-
-        # star_c_o_curl_01=csr_array((self.Nx*self.Ny,2*self.Nx*self.Ny))
-        # star_c_o_curl_01[:,:self.Nx*self.Ny]=kron(-Ax,delta_y_inv@Dy,format='csr')
-        # star_c_o_curl_01[:,self.Nx*self.Ny:]=kron(delta_x_inv@Dx,Ay,format='csr')
-        # self.left_matrix[:self.Nx*self.Ny,self.Nx*self.Ny:3*self.Nx*self.Ny]=-star_c_o_curl_01/2
-        # self.right_matrix[:self.Nx*self.Ny,self.Nx*self.Ny:3*self.Nx*self.Ny]=star_c_o_curl_01/2
-        # del star_c_o_curl_01
-
-        # A1=A_z@(eps@K_x/self.dt+sigma_x/2)
-        # A2=A_x@(mu@K_y/self.dt+mu@eps_inv@sigma_y/2)
-        # A3=A_y@(mu/self.dt)
-        # A_01_l=block_diag((A1,A2,A3),format='csr')
-        # self.left_matrix[:3*self.Nx*self.Ny,3*self.Nx*self.Ny:]=A_01_l
-        # del A_01_l
-
-        # A1=A_z@(eps@K_x/self.dt-sigma_x/2)
-        # A2=A_x@(mu@K_y/self.dt-mu@eps_inv@sigma_y/2)
-        # A3=A_y@(mu/self.dt)
-        # A_01_r=block_diag((A1,A2,A3),format='csr')
-        # self.right_matrix[:3*self.Nx*self.Ny,3*self.Nx*self.Ny:]=A_01_r
-        # del A_01_r
-
-        # A1=A_z/self.dt
-        # A2=A_x@(K_x/self.dt+sigma_x@eps_inv/2)
-        # A3=A_y@(K_y/self.dt+sigma_y@eps_inv/2)
-        # A_11_l=block_diag((A1,A2,A3),format='csr')
-        # self.left_matrix[3*self.Nx*self.Ny:,3*self.Nx*self.Ny:]=A_11_l
-        # del A_11_l
-
-        # A1=A_z/self.dt
-        # A2=A_x@(K_x/self.dt-sigma_x@eps_inv/2)
-        # A3=A_y@(K_y/self.dt-sigma_y@eps_inv/2)
-        # A_11_r=block_diag((A1,A2,A3),format='csr')
-        # self.right_matrix[3*self.Nx*self.Ny:,3*self.Nx*self.Ny:]=A_11_r
-        # del A_11_r
-
-        # A1=-A_z@(K_y/self.dt+sigma_y@eps_inv/2)
-        # A2=-A_x/self.dt
-        # A3=-A_y@(K_x/self.dt+sigma_x@eps_inv/2)
-        # A_10_l=block_diag((A1,A2,A3),format='csr')
-        # self.left_matrix[3*self.Nx*self.Ny:,:3*self.Nx*self.Ny]=A_10_l
-        # del A_10_l
-
-        # A1=-A_z@(K_y/self.dt-sigma_y@eps_inv/2)
-        # A2=-A_x/self.dt
-        # A3=-A_y@(K_x/self.dt-sigma_x@eps_inv/2)
-        # A_10_r=block_diag((A1,A2,A3),format='csr')
-        # self.right_matrix[3*self.Nx*self.Ny:,:3*self.Nx*self.Ny]=A_10_r
-        # del A_10_r
-
-        # self.left_matrix[0,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==0,1,0) # Moeten velden ergens pinnen zodat matrix niet singulier wordt
-        # self.right_matrix[0,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==0,1,0)
-        # self.left_matrix[self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==self.Nx*self.Ny,1,0)
-        # self.right_matrix[self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==self.Nx*self.Ny,1,0)
-        # self.left_matrix[2*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==2*self.Nx*self.Ny,1,0)
-        # self.right_matrix[2*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==2*self.Nx*self.Ny,1,0)
-        # self.left_matrix[3*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==3*self.Nx*self.Ny,1,0)
-        # self.right_matrix[3*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==3*self.Nx*self.Ny,1,0)
-        # self.left_matrix[4*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==4*self.Nx*self.Ny,1,0)
-        # self.right_matrix[4*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==4*self.Nx*self.Ny,1,0)
-        # self.left_matrix[5*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==5*self.Nx*self.Ny,1,0)
-        # self.right_matrix[5*self.Nx*self.Ny,:]=np.where(np.array([i for i in range(6*self.Nx*self.Ny)])==5*self.Nx*self.Ny,1,0)
-
     def restart(self):
         self.all_fields=np.zeros(6*self.Nx*self.Ny)
         self.n=0
@@ -249,7 +185,7 @@ class FCI:
             return [im,source_marker]
         
         ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt), repeat=repeat, blit=True)
-        ani.save("simulation.gif", writer="pillow", fps=10)
+        # ani.save("simulation.gif", writer="pillow", fps=10)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="3%", pad=0.05)
         cb = fig.colorbar(im, cax=cax, label='Ez [V/m]')
