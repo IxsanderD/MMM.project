@@ -18,7 +18,7 @@ x0 = a/3
 sigma_x = a/10
 xr = 7*a/3+2*b
 
-m = 20
+m = 10
 n = 20
 
 m_eff = 0.023*m_e.value
@@ -29,7 +29,7 @@ sigma = 5*E
 k = 3 # exponent for the absorbing boundary strength
 N_layer = 200
 t_max = 20000/kx
-speed = int(Lx/(5*t_max)*1e6)
+speed = int(t_max*Lx/500)
 
 ###
 # Without Absorbing Boundaries:
