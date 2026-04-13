@@ -5,7 +5,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.patches import Rectangle
 
 class Yee:
-    def __init__(self,L,Nx,Ny,Nt,dt,N_PML,m,PML=False):
+    def __init__(self,L,Nx,Ny,Nt,dt,N_PML,m,PML=False,sigma_max=246.558,kappa_max=4.221):
         self.L = L
         self.Nx = Nx
         self.Ny = Ny
@@ -29,16 +29,16 @@ class Yee:
         self.sigma = np.zeros((Nx+1,Ny+1))
         # PML:
         self.PML = PML
-        self.sigma_max = 500 #(m+1)/(150*np.pi*self.dx[0])
-        self.sig = np.array([self.sigma_max*(i/N_PML)**m for i in range(N_PML)])
+        self.sigma_max = sigma_max #(m+1)/(150*np.pi*self.dx[0])
+        self.sig = np.array([self.sigma_max*(i/N_PML)**m for i in range(1,N_PML+1)])
         self.Ezx = np.zeros((Nx+1,Ny+1))
         self.Ezy = np.zeros((Nx+1,Ny+1))
         self.sigmy = np.zeros((Nx,Ny+1))
         self.sigmx = np.zeros((Nx+1,Ny))
         self.sigey = np.zeros((Nx+1,Ny+1))
         self.sigex = np.zeros((Nx+1,Ny+1))
-        self.kappa_max = 3
-        self.kappa = np.array([1+(self.kappa_max-1)*(i/N_PML)**m for i in range(N_PML)])
+        self.kappa_max = kappa_max
+        self.kappa = np.array([1+(self.kappa_max-1)*(i/N_PML)**m for i in range(1,N_PML+1)])
         self.kappax = np.ones((Nx+1,Ny+1))
         self.kappay = np.ones((Nx+1,Ny+1))
         

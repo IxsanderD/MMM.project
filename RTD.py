@@ -11,21 +11,23 @@ b = 5
 Lx = 3*a+2*b
 Ly = 40
 Lz = Ly
-dx = Lx/2000
+dx = Lx/3000
 t_max = 100
-dt = 0.7*2/(2*hbar.value/(0.023*m_e.value*dx**2)+0/hbar.value)
-x0 = Lx/2
-sigma_x = x0/20
+U0 = 0.6*e.value*10**(-18)
+dt = 0.7*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
+x0 = a/3
+sigma_x = a/10
+
+m = 20
+n = 20
 
 m_eff = 0.023*m_e.value
-E = 8*e.value
-kx = np.sqrt(2*m_eff*E/hbar.value**2)/1e9 # in 1/nm
-sigma = 4e-36
+E = hbar.value**2/(2*m_eff)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
+print(f'Energy: {E/e.value*10**18:.2f} eV')
+kx = np.sqrt(2*m_eff*E/hbar.value**2) # in 1/nm
+sigma = 5*E
 k = 3 # exponent for the absorbing boundary strength
-N_layer = 80
-
-m = 1
-n = 1
+N_layer = 200
 
 ###
 # Without Absorbing Boundaries:
@@ -38,5 +40,27 @@ n = 1
 # With Absorbing Boundaries:
 ###
 
+# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+# solver.animate(m,n)
+
+###
+# With potential barriers:
+###
+
+# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+# solver.add_barriers(U0)
+# solver.animate(m,n)
+
+###
+# Validation with analytical solution:
+###
+
 solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
-solver.animate(m,n)
+solver.add_barriers(U0)
+
+E,T_ana = solver.analytical_T()
+plt.plot(E/e.value*10**18,T_ana,label='Analytical')
+plt.xlabel('Energy [eV]')
+plt.ylabel('Transmission')
+plt.legend()
+plt.show()
