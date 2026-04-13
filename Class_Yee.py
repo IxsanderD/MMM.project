@@ -81,6 +81,8 @@ class Yee:
         self.width = width
         self.Wc = Wc
         self.source_Ez = []
+        time = np.arange(self.Nt)*self.dt
+        self.applied_source = self.J0*np.sin(self.Wc*time)*np.exp(-(time-self.tc)**2/2/self.width**2)/2
         
     def add_recorder(self,xr,yr):
         self.xr = xr
@@ -137,7 +139,7 @@ class Yee:
             - self.B[1:-1,1:-1]/self.dy_dual[np.newaxis,:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
         )
         # Source:
-        self.Ez[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
+        self.Ez[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
         #Update Hy:
         self.Hy[:,1:-1] = self.Hy[:,1:-1] + self.dt/(self.muy[:,1:-1]*self.dx[:,np.newaxis])*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
         #Update Hx:
