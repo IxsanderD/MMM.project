@@ -62,7 +62,7 @@ solver.add_source(xs,ys,J0,tc,width,Wc)
 solver.add_recorder(xr,yr)
 solver.update_loop()
 
-# Plot time domain response
+# # Plot time domain response
 # plt.plot(solver.recorded_Ez, label='Simulated recorder')
 # plt.plot(solver.applied_source, label='Applied source')
 # plt.xlabel('Time (s)')
@@ -76,14 +76,14 @@ source_freq = np.fft.rfft(solver.applied_source)*dt
 omega = 2*np.pi*np.fft.rfftfreq(len(solver.recorded_Ez), dt)
 
 E_freq_ana = -J0*omega/4*hankel2(0, omega/c*np.sqrt((xr-xs)**2+(yr-ys)**2))
+E_freq_ana[0] = 0
 
 # Restrict to bandwidth of the source
 E_max = np.max(np.abs(source_freq))
-mask = np.abs(source_freq) > 0.005*E_max
+mask = (np.abs(source_freq) > 0.005*E_max)
 
 # Rescale
-index = len(omega[mask])//2
-E_freq_sim *= np.abs(E_freq_ana[index]/J0)/np.abs(E_freq_sim[index]/source_freq[index])
+E_freq_sim *= np.mean(np.abs(E_freq_ana[mask]/J0/E_freq_sim[mask]*source_freq[mask]))
 
 # Plot frequency domain response
 plt.plot(omega[mask], np.abs(E_freq_sim)[mask], label='Simulated recorder')

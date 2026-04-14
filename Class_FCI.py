@@ -28,7 +28,7 @@ class FCI:
 
     def add_source(self,xs,ys,J0,tc,width):
         self.xs = xs
-        self.ys = ys
+        self.ys = self.Ny - ys
         self.J0 = J0
         self.tc = tc
         self.width = width
@@ -37,7 +37,7 @@ class FCI:
 
     def add_recorder(self,xr,yr):
         self.xr = xr
-        self.yr = yr
+        self.yr = self.Ny - yr
         self.recorded_Ez = []
 
     def add_material(self,x_start,x_end,y_start,y_end,eps_r,mu_r,sigma):
@@ -180,14 +180,16 @@ class FCI:
         ax.set_xlim(0,np.sum(self.dx))
         ax.set_ylim(0,np.sum(self.dy))
         ax.set_title('Ez')
-        source_marker, = ax.plot(sum(self.dx[:self.xs]), sum(self.dy[:self.ys]), 'o', color='black', label='source', markersize=2, zorder=3)
+        source_marker, = ax.plot(sum(self.dx[:self.xs+1]), self.Ny - sum(self.dy[:self.ys+1]), 'o', color='black', label='source', markersize=2, zorder=3)
+        rec1, = ax.plot(sum(self.dx[:self.xr+1]), self.Ny - sum(self.dy[:self.yr+1]), 'x', color='red', label='recorder 1', zorder=3, markersize=6)
         def update(frame):
             self.update_loop(speed)
             Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
             im.set_data(Ez.T)
-            return [im,source_marker]
+            ax.set_title('Ez at t = {:.2f} s'.format(self.n*self.dt))
+            return [im,source_marker, rec1]
         
-        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt), repeat=repeat, blit=True)
+        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt), repeat=repeat)
         # ani.save("simulation.gif", writer="pillow", fps=10)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="3%", pad=0.05)
