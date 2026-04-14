@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.sparse import csr_array, diags, eye, kron
+from scipy.sparse import csr_array, diags, eye, kron, lil_array
 from scipy.sparse.linalg import splu
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -31,8 +31,6 @@ class FCI:
         self.J0 = J0
         self.tc = tc
         self.width = width
-        time = np.arange(self.Nt)*self.dt
-        self.applied_source = self.J0*np.exp(-(time-self.tc)**2/(2*self.width**2))
 
     def add_recorder(self,xr,yr):
         self.xr = xr
@@ -80,13 +78,13 @@ class FCI:
         end=time.perf_counter()
 
         K_y=np.ravel(K_y)
-        K_y=diags(K_y,offsets=0,format='csr')
+        K_y_dt=diags(K_y,offsets=0,format='csr')/self.dt
         K_x=np.ravel(K_x)
-        K_x=diags(K_x,offsets=0,format='csr')
+        K_x_dt=diags(K_x,offsets=0,format='csr')/self.dt
         sigma_x=np.ravel(sigma_x)
-        sigma_x=diags(sigma_x,offsets=0,format='csr')
+        sigma_x_2=diags(sigma_x,offsets=0,format='csr')/2
         sigma_y=np.ravel(sigma_y)
-        sigma_y=diags(sigma_y,offsets=0,format='csr')
+        sigma_y_2=diags(sigma_y,offsets=0,format='csr')/2
         eps=diags(self.eps,offsets=0,format='csr')
         eps_inv=diags(1/self.eps,offsets=0,format='csr')
         mu=diags(self.mu,offsets=0,format='csr')
@@ -97,78 +95,76 @@ class FCI:
         A_y=kron(Ax,np.eye(self.Ny),format='csr')
         A_z=kron(Ax,Ay,format='csr')
 
-        left_matrix=csr_array((6*self.Nx*self.Ny,6*self.Nx*self.Ny))
+        self.M11=csr_array((3*self.Nx*self.Ny,3*self.Nx*self.Ny))
+        self.M12=csr_array((3*self.Nx*self.Ny,3*self.Nx*self.Ny))
+        self.M21=csr_array((3*self.Nx*self.Ny,3*self.Nx*self.Ny))
+        self.M22=csr_array((3*self.Nx*self.Ny,3*self.Nx*self.Ny))
         self.right_matrix=csr_array((6*self.Nx*self.Ny,6*self.Nx*self.Ny))
         
         # block (0,0)
         start=time.perf_counter()
-        left_matrix[:self.Nx*self.Ny,:self.Nx*self.Ny]=-A_z@(K_y/self.dt+sigma_y@eps_inv/2)
-        self.right_matrix[:self.Nx*self.Ny,:self.Nx*self.Ny]=-A_z@(K_y/self.dt-sigma_y@eps_inv/2)
-        end=time.perf_counter()
-        print(f"Runtime: {end - start:.6f} seconds")
+        self.M11[:self.Nx*self.Ny,:self.Nx*self.Ny]=-A_z@(K_y_dt+sigma_y_2@eps_inv)
+        self.right_matrix[:self.Nx*self.Ny,:self.Nx*self.Ny]=-A_z@(K_y_dt-sigma_y_2@eps_inv)
 
         # block (0,1)
-        left_matrix[:self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=A_z/self.dt
+        self.M11[:self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=A_z/self.dt
         self.right_matrix[:self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=A_z/self.dt
 
         # block (1,1)
-        left_matrix[self.Nx*self.Ny:2*self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=A_z@(eps@K_x/self.dt+sigma_x/2+sigma/2)
-        self.right_matrix[self.Nx*self.Ny:2*self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=A_z@(eps@K_x/self.dt-sigma_x/2-sigma/2)
+        self.M11[self.Nx*self.Ny:2*self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=A_z@(eps@K_x_dt+sigma_x_2+sigma/2)
+        self.right_matrix[self.Nx*self.Ny:2*self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=A_z@(eps@K_x_dt-sigma_x_2-sigma/2)
 
         # block (1,2)
-        left_matrix[self.Nx*self.Ny:2*self.Nx*self.Ny,2*self.Nx*self.Ny:3*self.Nx*self.Ny]=kron(Ax,delta_y_inv@Dy,format='csr')/2
+        self.M11[self.Nx*self.Ny:2*self.Nx*self.Ny,2*self.Nx*self.Ny:3*self.Nx*self.Ny]=kron(Ax,delta_y_inv@Dy,format='csr')/2
         self.right_matrix[self.Nx*self.Ny:2*self.Nx*self.Ny,2*self.Nx*self.Ny:3*self.Nx*self.Ny]=-kron(Ax,delta_y_inv@Dy,format='csr')/2
 
         # block (1,4)
-        left_matrix[self.Nx*self.Ny:2*self.Nx*self.Ny,4*self.Nx*self.Ny:5*self.Nx*self.Ny]=-kron(delta_x_inv@Dx,Ay,format='csr')/2
+        self.M12[self.Nx*self.Ny:2*self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=-kron(delta_x_inv@Dx,Ay,format='csr')/2
         self.right_matrix[self.Nx*self.Ny:2*self.Nx*self.Ny,4*self.Nx*self.Ny:5*self.Nx*self.Ny]=kron(delta_x_inv@Dx,Ay,format='csr')/2
 
         # block (2,2)
-        left_matrix[2*self.Nx*self.Ny:3*self.Nx*self.Ny,2*self.Nx*self.Ny:3*self.Nx*self.Ny]=-A_x/self.dt
+        self.M11[2*self.Nx*self.Ny:3*self.Nx*self.Ny,2*self.Nx*self.Ny:3*self.Nx*self.Ny]=-A_x/self.dt
         self.right_matrix[2*self.Nx*self.Ny:3*self.Nx*self.Ny,2*self.Nx*self.Ny:3*self.Nx*self.Ny]=-A_x/self.dt
 
         # block (2,3)
-        left_matrix[2*self.Nx*self.Ny:3*self.Nx*self.Ny,3*self.Nx*self.Ny:4*self.Nx*self.Ny]=A_x@(K_x/self.dt+sigma_x@eps_inv/2)
-        self.right_matrix[2*self.Nx*self.Ny:3*self.Nx*self.Ny,3*self.Nx*self.Ny:4*self.Nx*self.Ny]=A_x@(K_x/self.dt-sigma_x@eps_inv/2)
+        self.M12[2*self.Nx*self.Ny:3*self.Nx*self.Ny,:self.Nx*self.Ny]=A_x@(K_x_dt+sigma_x_2@eps_inv)
+        self.right_matrix[2*self.Nx*self.Ny:3*self.Nx*self.Ny,3*self.Nx*self.Ny:4*self.Nx*self.Ny]=A_x@(K_x_dt-sigma_x_2@eps_inv)
 
         # block (3,0)
-        left_matrix[3*self.Nx*self.Ny:4*self.Nx*self.Ny,:self.Nx*self.Ny]=kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')/2
+        self.M21[:self.Nx*self.Ny,:self.Nx*self.Ny]=kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')/2
         self.right_matrix[3*self.Nx*self.Ny:4*self.Nx*self.Ny,:self.Nx*self.Ny]=-kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')/2
 
         # block (3,3)
-        left_matrix[3*self.Nx*self.Ny:4*self.Nx*self.Ny,3*self.Nx*self.Ny:4*self.Nx*self.Ny]=A_x@(mu@K_y/self.dt+mu@sigma_y@eps_inv/2)
-        self.right_matrix[3*self.Nx*self.Ny:4*self.Nx*self.Ny,3*self.Nx*self.Ny:4*self.Nx*self.Ny]=A_x@(mu@K_y/self.dt-mu@sigma_y@eps_inv/2)
+        self.M22[:self.Nx*self.Ny,:self.Nx*self.Ny]=A_x@(mu@K_y_dt+mu@sigma_y_2@eps_inv)
+        self.right_matrix[3*self.Nx*self.Ny:4*self.Nx*self.Ny,3*self.Nx*self.Ny:4*self.Nx*self.Ny]=A_x@(mu@K_y_dt-mu@sigma_y_2@eps_inv)
 
         # block (4,4)
-        left_matrix[4*self.Nx*self.Ny:5*self.Nx*self.Ny,4*self.Nx*self.Ny:5*self.Nx*self.Ny]=-A_y@(K_x/self.dt+sigma_x@eps_inv/2)
-        self.right_matrix[4*self.Nx*self.Ny:5*self.Nx*self.Ny,4*self.Nx*self.Ny:5*self.Nx*self.Ny]=-A_y@(K_x/self.dt-sigma_x@eps_inv/2)
+        self.M22[self.Nx*self.Ny:2*self.Nx*self.Ny,self.Nx*self.Ny:2*self.Nx*self.Ny]=-A_y@(K_x_dt+sigma_x_2@eps_inv)
+        self.right_matrix[4*self.Nx*self.Ny:5*self.Nx*self.Ny,4*self.Nx*self.Ny:5*self.Nx*self.Ny]=-A_y@(K_x_dt-sigma_x_2@eps_inv)
 
         # block (4,5)
-        left_matrix[4*self.Nx*self.Ny:5*self.Nx*self.Ny,5*self.Nx*self.Ny:]=A_y@(K_y/self.dt+sigma_y@eps_inv/2)
-        self.right_matrix[4*self.Nx*self.Ny:5*self.Nx*self.Ny,5*self.Nx*self.Ny:]=A_y@(K_y/self.dt-sigma_y@eps_inv/2)
+        self.M22[self.Nx*self.Ny:2*self.Nx*self.Ny,2*self.Nx*self.Ny:]=A_y@(K_y_dt+sigma_y_2@eps_inv)
+        self.right_matrix[4*self.Nx*self.Ny:5*self.Nx*self.Ny,5*self.Nx*self.Ny:]=A_y@(K_y_dt-sigma_y_2@eps_inv)
 
         # block (5,0)
-        left_matrix[5*self.Nx*self.Ny:,:self.Nx*self.Ny]=-kron(delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')/2
+        self.M21[2*self.Nx*self.Ny:,:self.Nx*self.Ny]=-kron(delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')/2
         self.right_matrix[5*self.Nx*self.Ny:,:self.Nx*self.Ny]=kron(delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')/2
 
         # block (5,5)
-        left_matrix[5*self.Nx*self.Ny:,5*self.Nx*self.Ny:]=A_y@mu/self.dt
+        self.M22[2*self.Nx*self.Ny:,2*self.Nx*self.Ny:]=A_y@mu/self.dt
         self.right_matrix[5*self.Nx*self.Ny:,5*self.Nx*self.Ny:]=A_y@mu/self.dt
-        
-        start=time.perf_counter()
-        self.M12=left_matrix[:3*self.Nx*self.Ny,3*self.Nx*self.Ny:]
-        self.M21=left_matrix[3*self.Nx*self.Ny:,:3*self.Nx*self.Ny]
-        self.M22_LU=splu(left_matrix[3*self.Nx*self.Ny:,3*self.Nx*self.Ny:].tocsc())
-        M22_inv_M21=csr_array(self.M22_LU.solve(self.M21.toarray()))
-        S=(left_matrix[:3*self.Nx*self.Ny,:3*self.Nx*self.Ny]-self.M12@M22_inv_M21).tocsc()
-        self.S_LU=splu(S)
         end=time.perf_counter()
         print(f"Runtime: {end - start:.6f} seconds")
+        
+        self.M22_LU=splu(self.M22.tocsc())
+        M22_inv_M21=csr_array(self.M22_LU.solve(self.M21.toarray()))
+        S=(self.M11-self.M12@M22_inv_M21).tocsc()
+        self.S_LU=splu(S)
+        end=time.perf_counter()
 
     def restart(self):
         self.all_fields=np.zeros(6*self.Nx*self.Ny)
         self.n=0
-        self.recorded_Ez = []
     
     def update(self):
         b1=self.right_matrix[:3*self.Nx*self.Ny,:]@self.all_fields
