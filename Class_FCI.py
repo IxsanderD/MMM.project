@@ -31,6 +31,8 @@ class FCI:
         self.J0 = J0
         self.tc = tc
         self.width = width
+        time = np.arange(self.Nt)*self.dt
+        self.applied_source = self.J0*np.exp(-(time-self.tc)**2/(2*self.width**2))
 
     def add_recorder(self,xr,yr):
         self.xr = xr
@@ -166,6 +168,7 @@ class FCI:
     def restart(self):
         self.all_fields=np.zeros(6*self.Nx*self.Ny)
         self.n=0
+        self.recorded_Ez = []
     
     def update(self):
         b1=self.right_matrix[:3*self.Nx*self.Ny,:]@self.all_fields
@@ -216,5 +219,3 @@ class FCI:
         plt.title(f'Recorded Ez at ({round(sum(self.dx[:self.xr]),1)}, {round(sum(self.dy[:self.yr]),1)})')
         plt.grid()
         plt.show()
-
-
