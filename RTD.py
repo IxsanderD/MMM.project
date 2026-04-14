@@ -5,6 +5,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.patches import Rectangle
 from Class_RTD import RTD
 from astropy.constants.astropyconst20 import m_e,hbar,e
+import cmath
 
 a = 15
 b = 5
@@ -18,8 +19,8 @@ x0 = a/3
 sigma_x = a/10
 xr = 7*a/3+2*b
 
-m = 20
-n = 20
+m = 1
+n = 1
 
 m_eff = 0.023*m_e.value
 E = hbar.value**2/(2*m_eff)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
@@ -51,34 +52,41 @@ speed = int(t_max*Lx/500)
 # With potential barriers:
 ###
 
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
 
-solver.add_barriers(U0)
-solver.add_recorder(xr)
-solver.animate(speed = speed)
+# solver.add_barriers(U0)
+# solver.add_recorder(xr)
+# solver.animate(speed = speed)
 
-solver.restart()
-solver.update_loop_2()
-solver.show_recorder()
+# solver.restart()
+# solver.update_loop_2()
+# solver.show_recorder()
 
-# Current density:
+# # Current density:
 
-t, J = solver.J_time()
-plt.plot(t,J)
-plt.xlabel('Time [s]')
-plt.ylabel('Current density')
-plt.show()
+# t, J_time = solver.J_time()
+# plt.plot(t,J_time)
+# plt.xlabel('Time [s]')
+# plt.ylabel('Current density')
+# plt.show()
+
+# E, J_freq = solver.J_freq(t,J_time)
+# plt.plot(E,np.abs(J_freq))
+# plt.xlabel('Energy [eV]')
+# plt.ylabel('Current density')
+# plt.show()
 
 ###
 # Validation with analytical solution:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
-# solver.add_barriers(U0)
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+solver.add_barriers(U0)
+solver.add_recorder(xr)
 
-# E,T_ana = solver.analytical_T()
-# plt.plot(E/e.value*10**18,T_ana,label='Analytical')
-# plt.xlabel('Energy [eV]')
-# plt.ylabel('Transmission')
-# plt.legend()
-# plt.show()
+E,T_ana = solver.analytical_T()
+plt.plot(np.real(E)/e.value*10**18,T_ana,label='Analytical')
+plt.xlabel('Energy [eV]')
+plt.ylabel('Transmission')
+plt.legend()
+plt.show()
