@@ -3,12 +3,13 @@ import matplotlib.pyplot as plt
 from scipy.constants import c, epsilon_0, mu_0
 from Class_FCI import FCI
 import time
+from scipy.sparse.linalg import lsqr
 from scipy.special import hankel2
 
 start=time.perf_counter()
 
-Nx=70
-Ny=70
+Nx=51
+Ny=51
 Nt=100
 dx=np.ones(Nx)
 dy=np.ones(Ny)
