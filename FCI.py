@@ -23,15 +23,14 @@ J0 = 10
 # tf= 5*tc
 # dt=tf/Nt
 # Wc = 5/width
-Wc = 0.05*2*np.pi
+Wc = 2*np.pi*c0/(7*dx[0])
 width = 5/Wc
 tc = 5*width
 dt = 5*tc/Nt
 
 m = 4
 k_max=1
-sigma_max=10
-# (m+1)/(150*np.pi*dx[0])
+sigma_max= 100 #(m+1)/(150*np.pi*dx[0])
 
 # xs = Nx//2
 # ys = Ny//2
@@ -74,56 +73,75 @@ xr = Nx//4
 yr = Ny//4
 
 solver=FCI(Nx,Ny,Nt,dx,dy,dt,eps,mu,k_max,sigma_max)
-# solver.construct_update_matrix()
+solver.construct_update_matrix()
 end=time.perf_counter()
 print(f"Runtime: {end - start:.6f} seconds")
 solver.add_source(xs,ys,J0,tc,width,Wc)
-plt.plot(np.arange(solver.Nt)*solver.dt, solver.applied_source, label='Applied source')
-plt.show()
-plt.plot(np.fft.rfftfreq(solver.Nt, solver.dt), np.abs(np.fft.rfft(solver.applied_source)*dt), label='Applied source (frequency domain)')
-plt.show()
-# solver.add_recorder(xr,yr)
+solver.add_recorder(xr,yr)
+
+# # Plot source in time and frequency domain
+# plt.plot(np.arange(solver.Nt)*solver.dt, solver.applied_source, label='Applied source')
+# plt.xlabel('Time (s)')
+# plt.ylabel('Applied source (A/m^2)')
+# plt.title('Time domain applied source')
+# plt.legend()
+# plt.show()
+# plt.plot(2*np.pi*np.fft.rfftfreq(solver.Nt, solver.dt), np.abs(np.fft.rfft(solver.applied_source)*dt), label='Applied source (frequency domain)')
+# plt.xlabel('Frequency (rad/s)')
+# plt.ylabel('Applied source (A/m^2)')
+# plt.title('Frequency domain applied source')
+# plt.legend()
+# plt.show()
 # solver.animate()
 
-# solver.restart()
-# solver.update_loop()
+solver.restart()
+solver.update_loop()
 # solver.show_recorder()
 
-# # Plot time domain response
-# plt.plot(solver.recorded_Ez, label='Simulated recorder')
-# plt.plot(solver.applied_source, label='Applied source')
-# plt.xlabel('Time (s)')
-# plt.ylabel('|E_z|')
-# plt.legend()
-# plt.title('Time domain response')
-# plt.show()
+# Plot time domain response
+plt.plot(solver.recorded_Ez, label='Simulated recorder')
+plt.plot(solver.applied_source, label='Applied source')
+plt.xlabel('Time (s)')
+plt.ylabel('|E_z|')
+plt.legend()
+plt.title('Time domain response')
+plt.show()
 
-# E_freq_sim = np.fft.rfft(solver.recorded_Ez)*dt
-# source_freq = np.fft.rfft(solver.applied_source)*dt
-# omega = 2*np.pi*np.fft.rfftfreq(len(solver.recorded_Ez), dt)
-# E_freq_ana = -J0*omega/4*hankel2(0, omega/c*np.sqrt((xr-xs)**2+(yr-ys)**2))
-# E_freq_ana[0] = 0
+E_freq_sim = np.fft.rfft(solver.recorded_Ez)*dt
+source_freq = np.fft.rfft(solver.applied_source)*dt
+omega = 2*np.pi*np.fft.rfftfreq(len(solver.recorded_Ez), dt)
 
-# # Restrict to bandwidth of the source
-# E_max = np.max(np.abs(source_freq))
-# mask = (np.abs(source_freq) > 0.005*E_max)
+# Source and recorder distance
+delta_x = np.sum(solver.dx[:xs]) - np.sum(solver.dx[:xr])
+delta_y = np.sum(solver.dy[:ys]) - np.sum(solver.dy[:yr])
+print(delta_x, delta_y)
 
-# # Rescale
-# E_freq_sim *= np.mean(np.abs(E_freq_ana[mask]/J0/E_freq_sim[mask]*source_freq[mask]))
+# Analytical solution
+E_freq_ana = -J0*omega/4*hankel2(0, omega/c0*np.sqrt(delta_x**2+delta_y**2))
+E_freq_ana[0] = 0
 
-# # Plot frequency domain response
-# plt.plot(omega, np.abs(E_freq_sim), label='Electric field at recorder (V/m)')
-# plt.plot(omega, np.abs(source_freq), label='Applied source current density (A/m^2)')
-# plt.xlabel('Frequency (rad/s)')
-# plt.legend()
-# plt.title('Frequency domain response')
-# plt.show()
+# Restrict to bandwidth of the source
+E_max = np.max(np.abs(source_freq))
+mask = (np.abs(source_freq) > 0.005*E_max)
+# mask = omega < 250
+# mask = np.ones(len(source_freq), dtype=bool)
 
-# # Compare with analytical solution
-# plt.plot(omega[mask], np.abs(E_freq_sim/source_freq)[mask], label='Numerical response (rescaled)')
-# plt.plot(omega[mask], np.abs(E_freq_ana/J0)[mask], label='Analytical response')
-# plt.xlabel('Frequency (rad/s)')
-# plt.ylabel('|E_z/J|')
-# plt.legend()
-# plt.title('Frequency response comparison')
-# plt.show()
+# Rescale
+E_freq_sim *= np.mean(np.abs(E_freq_ana[mask]/J0/E_freq_sim[mask]*source_freq[mask]))
+
+# Plot frequency domain response
+plt.plot(omega, np.abs(E_freq_sim), label='Electric field at recorder (V/m)')
+plt.plot(omega, np.abs(source_freq), label='Applied source current density (A/m^2)')
+plt.xlabel('Frequency (rad/s)')
+plt.legend()
+plt.title('Frequency domain response')
+plt.show()
+
+# Compare with analytical solution
+plt.plot(omega[mask], np.abs(E_freq_sim/source_freq)[mask], label='Numerical response (rescaled)')
+plt.plot(omega[mask], np.abs(E_freq_ana/J0)[mask], label='Analytical response')
+plt.xlabel('Frequency (rad/s)')
+plt.ylabel('|E_z/J|')
+plt.legend()
+plt.title('Frequency response comparison')
+plt.show()

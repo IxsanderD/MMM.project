@@ -62,42 +62,50 @@ solver.add_source(xs,ys,J0,tc,width,Wc)
 solver.add_recorder(xr,yr)
 solver.update_loop()
 
-# # Plot time domain response
-# plt.plot(solver.recorded_Ez, label='Simulated recorder')
-# plt.plot(solver.applied_source, label='Applied source')
-# plt.xlabel('Time (s)')
-# plt.ylabel('|E_z|')
-# plt.legend()
-# plt.title('Time domain response')
-# plt.show()
+# Plot time domain response
+plt.plot(solver.recorded_Ez, label='Simulated recorder')
+plt.plot(solver.applied_source, label='Applied source')
+plt.xlabel('Time (s)')
+plt.ylabel('|E_z|')
+plt.legend()
+plt.title('Time domain response')
+plt.show()
 
 E_freq_sim = np.fft.rfft(solver.recorded_Ez)*dt
 source_freq = np.fft.rfft(solver.applied_source)*dt
 omega = 2*np.pi*np.fft.rfftfreq(len(solver.recorded_Ez), dt)
 
-E_freq_ana = -J0*omega/4*hankel2(0, omega/c*np.sqrt((xr-xs)**2+(yr-ys)**2))
+# Source and recorder distance
+delta_x = np.sum(solver.dx[:xs]) - np.sum(solver.dx[:xr])
+delta_y = np.sum(solver.dy[:ys]) - np.sum(solver.dy[:yr])
+print(delta_x, delta_y)
+
+# Analytical solution
+E_freq_ana = -J0*omega/4*hankel2(0, omega/c*np.sqrt(delta_x**2+delta_y**2))
 E_freq_ana[0] = 0
 
 # Restrict to bandwidth of the source
 E_max = np.max(np.abs(source_freq))
 mask = (np.abs(source_freq) > 0.005*E_max)
+# mask = omega < 250
+# mask = np.ones(len(source_freq), dtype=bool)
 
 # Rescale
 E_freq_sim *= np.mean(np.abs(E_freq_ana[mask]/J0/E_freq_sim[mask]*source_freq[mask]))
 
 # Plot frequency domain response
-plt.plot(omega[mask], np.abs(E_freq_sim)[mask], label='Simulated recorder')
-plt.plot(omega[mask], np.abs(source_freq)[mask], label='Applied source')
+plt.plot(omega, np.abs(E_freq_sim), label='Electric field at recorder (V/m)')
+plt.plot(omega, np.abs(source_freq), label='Applied source current density (A/m^2)')
 plt.xlabel('Frequency (rad/s)')
-plt.ylabel('|E_z|')
 plt.legend()
 plt.title('Frequency domain response')
 plt.show()
 
-plt.plot(omega[mask], np.abs(E_freq_sim/source_freq)[mask], label='Numerical response to applied source')
+# Compare with analytical solution
+plt.plot(omega[mask], np.abs(E_freq_sim/source_freq)[mask], label='Numerical response (rescaled)')
 plt.plot(omega[mask], np.abs(E_freq_ana/J0)[mask], label='Analytical response')
 plt.xlabel('Frequency (rad/s)')
-plt.ylabel('|E_z|')
+plt.ylabel('|E_z/J|')
 plt.legend()
 plt.title('Frequency response comparison')
 plt.show()
