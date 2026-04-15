@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.patches import Rectangle
+from scipy.special import hankel2
 
 class Yee:
     def __init__(self,L,Nx,Ny,Nt,dt,N_PML,m,PML=False,sigma_max=246.558,kappa_max=4.221):
@@ -228,4 +229,56 @@ class Yee:
         plt.ylabel('Ez at recorder [V/m]')
         plt.title(f'Recorded Ez at ({round(sum(self.dx[:self.xr]),2)}, {round(self.L-sum(self.dy[:self.yr]),2)})')
         plt.grid()
+        plt.show()
+
+    def analytical_solution(self, plot_all = True, frequency_limit = None):
+
+        if plot_all:
+            # Plot time domain response
+            plt.plot(self.recorded_Ez, label='Electric field at recorder (V/m)')
+            plt.plot(self.applied_source, label='Applied source ($A/m^2$)')
+            plt.xlabel('Time (s)')
+            plt.legend()
+            plt.title('Time domain response')
+            plt.show()
+
+        E_freq_sim = np.fft.rfft(self.recorded_Ez)*self.dt
+        source_freq = np.fft.rfft(self.applied_source)*self.dt
+        omega = 2*np.pi*np.fft.rfftfreq(len(self.recorded_Ez), self.dt)
+
+        # Source and recorder distance
+        delta_x = np.sum(self.dx[:self.xs]) - np.sum(self.dx[:self.xr])
+        delta_y = np.sum(self.dy[:self.ys]) - np.sum(self.dy[:self.yr])
+        print(delta_x, delta_y)
+
+        # Analytical solution
+        E_freq_ana = -self.J0*omega/4*hankel2(0, omega/self.c*np.sqrt(delta_x**2+delta_y**2))
+        E_freq_ana[0] = 0
+
+        # Restrict to bandwidth of the source
+        E_max = np.max(np.abs(source_freq))
+        if frequency_limit is None:
+            mask = (np.abs(source_freq) > 0.005*E_max)
+        else:
+            mask = (omega <= frequency_limit)
+
+        if plot_all:
+            # Plot frequency domain response
+            plt.plot(omega, np.abs(E_freq_sim), label='Electric field at recorder (V/m)')
+            plt.plot(omega, np.abs(source_freq), label='Applied source current density ($A/m^2$)')
+            plt.xlabel('Frequency (rad/s)')
+            plt.legend()
+            plt.title('Frequency domain response')
+            plt.show()
+        
+        # Rescale
+        E_freq_sim *= np.mean(np.abs(E_freq_ana[mask]/self.J0/E_freq_sim[mask]*source_freq[mask]))
+
+        # Compare with analytical solution
+        plt.plot(omega[mask], np.abs(E_freq_sim/source_freq)[mask], label='Numerical response (rescaled)')
+        plt.plot(omega[mask], np.abs(E_freq_ana/self.J0)[mask], label='Analytical response')
+        plt.xlabel('Frequency (rad/s)')
+        plt.ylabel('|$E_z/J$|')
+        plt.legend()
+        plt.title('Frequency response comparison')
         plt.show()
