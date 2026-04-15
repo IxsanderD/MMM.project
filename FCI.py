@@ -7,8 +7,8 @@ from scipy.sparse.linalg import lsqr
 
 start=time.perf_counter()
 
-Nx=51
-Ny=51
+Nx=101
+Ny=101
 Nt=100
 dx=np.ones(Nx)
 dy=np.ones(Ny)
@@ -29,10 +29,10 @@ ys = Ny//2
 solver=FCI(Nx,Ny,Nt,dx,dy,dt,eps,mu,k_max,sigma_max)
 # solver.add_material(3*Nx//5,4*Nx//5,3*Ny//5,4*Ny//5,2,2,1)
 solver.construct_update_matrix()
-end=time.perf_counter()
-print(f"Runtime: {end - start:.6f} seconds")
 solver.add_source(xs,ys,J0,tc,width)
 solver.add_recorder(xs,ys)
 # solver.update_loop()
 # solver.show_recorder()
 solver.animate()
+end=time.perf_counter()
+print(f"Runtime: {end - start:.6f} seconds")
