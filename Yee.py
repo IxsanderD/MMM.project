@@ -57,19 +57,19 @@ m = 4
 # Analytical verification
 ###
 
-solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
-solver.add_source(xs,ys,J0,tc,width,Wc)
-solver.add_recorder(xr,yr)
-solver.update_loop()
+# solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
+# solver.add_source(xs,ys,J0,tc,width,Wc)
+# solver.add_recorder(xr,yr)
+# solver.update_loop()
 
-solver.analytical_solution(frequency_limit=None)
+# solver.analytical_solution(frequency_limit=None)
 
 ###
 # With matreial
 ###
 
-# solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
-# solver.add_source(xs,ys,J0,tc,width,Wc)
+solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
+solver.add_source(xs,ys,J0,tc,width,Wc)
 
 # # Plot source in time and frequency domain
 # plt.plot(np.arange(solver.Nt)*solver.dt, solver.applied_source, label='Applied source')
@@ -86,10 +86,11 @@ solver.analytical_solution(frequency_limit=None)
 # plt.show()
 # solver.animate()
 
-# solver.add_recorder(xr,yr)
-# solver.add_material(3*Nx//4,4*Nx//5,Ny//4,3*Ny//4,eps_r=1,mu_r=1,sigma=40000000)
+solver.add_recorder(xr,yr)
+# solver.add_material(3*Nx//4,4*Nx//5,Ny//4,3*Ny//4,eps_r=1,mu_r=1,sigma=100)
+solver.add_drude_material(3*Nx//4,4*Nx//5,Ny//4,3*Ny//4,eps_r=1,sigma_DC=100,gamma=0)
 
-# solver.animate(speed = 10)
+solver.animate(speed = 10)
 # solver.restart()
 
 # solver.update_loop()
