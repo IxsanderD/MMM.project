@@ -25,16 +25,20 @@ class FCI:
         self.kmax=k_max
         self.sigmamax=sigma_max
 
-    def add_source(self,xs,ys,J0,tc,width):
+    def add_source(self,xs,ys,J0,tc,width,Wc):
         self.xs = xs
-        self.ys = ys
+        self.ys = self.Ny - ys
         self.J0 = J0
         self.tc = tc
         self.width = width
+        self.Wc = Wc
+        time = np.arange(self.Nt)*self.dt
+        # self.applied_source = J0*np.exp(-(time-tc)**2/(2*width**2))
+        self.applied_source = J0*np.sin(Wc*time)*np.exp(-(time-tc)**2/(2*width**2))
 
     def add_recorder(self,xr,yr):
         self.xr = xr
-        self.yr = yr
+        self.yr = self.Ny - yr
         self.recorded_Ez = []
 
     def add_material(self,x_start,x_end,y_start,y_end,eps_r,mu_r,sigma):
@@ -163,10 +167,12 @@ class FCI:
     def restart(self):
         self.all_fields=np.zeros(6*self.Nx*self.Ny)
         self.n=0
+        self.recorded_Ez = []
     
     def update(self):
         b1=self.right_matrix[:3*self.Nx*self.Ny,:]@self.all_fields
-        b1[self.Nx*self.Ny+self.xs*self.Ny+self.ys]+=self.J0*np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
+        # b1[self.Nx*self.Ny+self.xs*self.Ny+self.ys]+=self.J0*np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
+        b1[self.Nx*self.Ny+self.xs*self.Ny+self.ys]+=self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
         b2=self.right_matrix[3*self.Nx*self.Ny:,:]@self.all_fields
         M22_inv_b2=self.M22_LU.solve(b2)
         self.all_fields[:3*self.Nx*self.Ny]=self.S_LU.solve(b1-self.M12@M22_inv_b2)
@@ -184,20 +190,22 @@ class FCI:
     def animate(self,speed=1,repeat=False):
         Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
         fig, ax = plt.subplots()
-        im = ax.imshow(Ez.T,cmap='RdBu_r',extent=(0,np.sum(self.dx),0,np.sum(self.dy)),vmin=-1,vmax=1)
+        im = ax.imshow(Ez.T,cmap='RdBu_r',extent=(0,np.sum(self.dx),0,np.sum(self.dy)),vmin=-0.05,vmax=0.05)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_xlim(0,np.sum(self.dx))
         ax.set_ylim(0,np.sum(self.dy))
         ax.set_title('Ez')
-        source_marker, = ax.plot(sum(self.dx[:self.xs]), sum(self.dy[:self.ys]), 'o', color='black', label='source', markersize=2, zorder=3)
+        source_marker, = ax.plot(sum(self.dx[:self.xs+1]), np.sum(self.dy) - sum(self.dy[:self.ys+1]), 'o', color='black', label='source', markersize=2, zorder=3)
+        rec1, = ax.plot(sum(self.dx[:self.xr+1]), np.sum(self.dy) - sum(self.dy[:self.yr+1]), 'x', color='red', label='recorder 1', zorder=3, markersize=6)
         def update(frame):
             self.update_loop(speed)
             Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
             im.set_data(Ez.T)
-            return [im,source_marker]
+            ax.set_title('Ez at t = {:.2f} s'.format(self.n*self.dt))
+            return [im,source_marker, rec1]
         
-        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=self.dt, repeat=repeat, blit=True)
+        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt), repeat=repeat)
         # ani.save("simulation.gif", writer="pillow", fps=10)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="3%", pad=0.05)

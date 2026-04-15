@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astropy.constants.astropyconst20 import m_e,hbar,e
+import cmath
 
 class RTD:
     def __init__(self,dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True):
@@ -62,7 +63,7 @@ class RTD:
         self.U0 = U0
         self.U[int(self.a//self.dx):int((self.a+self.b)//self.dx)] = U0
         self.U[int((2*self.a+self.b)//self.dx):int((2*self.a+2*self.b)//self.dx)] = U0
-        self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2)
+        self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
         
     def plot_potential(self):
         plt.plot(np.arange(self.Nx)*self.dx,self.U)
@@ -147,15 +148,15 @@ class RTD:
         plt.show()
         
     def analytical_T(self): # Should be function of E... Use Fourier to find numerical T(E)
-        E_array = np.linspace(1.01*self.U0,self.U0*10,1000)
+        E_array = np.linspace(0.01*self.U0,0.99*self.U0,1000)+0j
         kx_array = np.sqrt(2*self.m*E_array/self.hbar**2)
         Kx_array = np.sqrt(2*self.m*(E_array-self.U0)/self.hbar**2)
         T = []
         for kx,Kx in zip(kx_array,Kx_array):
-            M12 = 1/2*np.array([[1+Kx/kx,1-Kx/kx],[1-Kx/kx,1+Kx/kx]])
-            M23 = 1/2*np.array([[1+kx/Kx,1-kx/Kx],[1-kx/Kx,1+kx/Kx]])
-            M1 = np.array([[np.exp(-1j*kx*self.a),0],[0,np.exp(1j*Kx*self.a)]])
-            M2 = np.array([[np.exp(-1j*Kx*self.b),0],[0,np.exp(1j*Kx*self.b)]])
+            M12 = 1/2*np.array([[1+Kx/kx,1-Kx/kx],[1-Kx/kx,1+Kx/kx]],dtype=complex)
+            M23 = 1/2*np.array([[1+kx/Kx,1-kx/Kx],[1-kx/Kx,1+kx/Kx]],dtype=complex)
+            M1 = np.array([[np.exp(-1j*kx*self.a),0],[0,np.exp(1j*Kx*self.a)]],dtype=complex)
+            M2 = np.array([[np.exp(-1j*Kx*self.b),0],[0,np.exp(1j*Kx*self.b)]],dtype=complex)
             M = M12@M2@M23@M1@M12@M2@M23
             T.append(1/np.abs(M[0,0])**2)
         return E_array,np.array(T)
@@ -169,3 +170,9 @@ class RTD:
         J = Re_left*Im_right - Im_left*Re_right
         t = np.arange(len(J))*self.dt
         return t, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
+    
+    def J_freq(self,t,J_time): # To be continued
+        f = np.fft.fftfreq(len(J_time), t[1]-t[0])
+        E = 2*np.pi*self.hbar*f[:len(f)//2]/e.value*10**18
+        J_freq = np.fft.fft(J_time)[:len(f)//2]
+        return E, J_freq
