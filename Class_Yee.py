@@ -21,6 +21,7 @@ class Yee:
         self.Ez = np.zeros((Nx+1,Ny+1))
         self.Hx = np.zeros((Nx+1,Ny))
         self.Hy = np.zeros((Nx,Ny+1))
+        self.Jc = np.zeros((Nx+1,Ny+1))
         # Parameters:
         self.eps = np.ones((Nx+1,Ny+1))
         self.mu = np.ones((Nx+1,Ny+1))
@@ -28,6 +29,10 @@ class Yee:
         self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
         self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
         self.sigma = np.zeros((Nx+1,Ny+1))
+        # Drude parameters:
+        self.drude = False
+        self.sigma_DC = np.zeros((Nx+1,Ny+1))
+        self.gamma = np.zeros((Nx+1,Ny+1))
         # PML:
         self.PML = PML
         self.sigma_max = sigma_max #(m+1)/(150*np.pi*self.dx[0])
@@ -73,6 +78,18 @@ class Yee:
         self.Dzy = 1/(self.kappay*self.eps/self.dt+self.sigey/2+self.sigma/2)
         self.Czx = (self.kappax*self.eps/self.dt-self.sigex/2-self.sigma/2)/(self.kappax*self.eps/self.dt+self.sigex/2+self.sigma/2)
         self.Dzx = 1/(self.kappax*self.eps/self.dt+self.sigex/2+self.sigma/2)
+        # For auxiliary differential equation:
+        self.A_ade = (self.eps/self.dt - self.sigma_DC/2/(2*self.gamma/self.dt + 1)) / (self.eps/self.dt + self.sigma_DC/2/(2*self.gamma/self.dt + 1))
+        self.B_ade = 1/(self.eps/self.dt + self.sigma_DC/2/(2*self.gamma/self.dt + 1))
+        self.Czy_ade = (self.kappay*self.eps/self.dt - self.sigey/2 - self.sigma_DC/2/(2*self.gamma/self.dt + 1)) / (self.kappay*self.eps/self.dt + self.sigey/2 + self.sigma_DC/2/(2*self.gamma/self.dt + 1))
+        self.Dzy_ade = 1/(self.kappay*self.eps/self.dt + self.sigey/2 + self.sigma_DC/2/(2*self.gamma/self.dt + 1))
+        self.Czx_ade = (self.kappax*self.eps/self.dt - self.sigex/2 - self.sigma_DC/2/(2*self.gamma/self.dt + 1)) / (self.kappax*self.eps/self.dt + self.sigex/2 + self.sigma_DC/2/(2*self.gamma/self.dt + 1))
+        self.Dzx_ade = 1/(self.kappax*self.eps/self.dt + self.sigex/2 + self.sigma_DC/2/(2*self.gamma/self.dt + 1))
+        self.G = (2*self.gamma/self.dt - 1)/(2*self.gamma/self.dt + 1)
+        self.F = self.sigma_DC/(2*self.gamma/self.dt + 1)
+        self.X = 2*self.gamma/self.dt/(2*self.gamma/self.dt + 1)*self.B_ade
+        self.Xy = 2*self.gamma/self.dt/(2*self.gamma/self.dt + 1)*self.Dzy_ade
+        self.Xx = 2*self.gamma/self.dt/(2*self.gamma/self.dt + 1)*self.Dzx_ade
         
     def add_source(self,xs,ys,J0,tc,width,Wc):
         self.xs = xs
@@ -100,6 +117,18 @@ class Yee:
         self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
         self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
         self.sigma[x_start:x_end,y_start:y_end] = sigma
+        self.make_matrices()
+
+    def add_drude_material(self,x_start,x_end,y_start,y_end,eps_r,sigma_DC,gamma):
+        self.x_start = x_start
+        self.x_end = x_end
+        self.y_start = y_start
+        self.y_end = y_end
+        self.eps[x_start:x_end,y_start:y_end] = eps_r
+        self.sigma_DC[x_start:x_end,y_start:y_end] = sigma_DC
+        self.gamma[x_start:x_end,y_start:y_end] = gamma
+        self.drude = True
+        self.Ez_old = np.zeros((self.Nx+1,self.Ny+1))
         self.make_matrices()
         
     def restart(self):
@@ -172,13 +201,69 @@ class Yee:
         self.n += 1
         self.recorded_Ez.append(self.Ez[self.xr,self.yr])
         self.source_Ez.append(self.Ez[self.xs,self.ys])
+
+    def update_drude_PML(self):
+        # Update Ez:
+        self.Ez_old = self.Ez.copy()
+        self.Ezy[1:-1,1:-1] = (
+            self.Czy_ade[1:-1,1:-1]*self.Ezy[1:-1,1:-1] 
+            - self.Dzy_ade[1:-1,1:-1]/self.dy_dual*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
+        )
+        self.Ezx[1:-1,1:-1] = (
+            self.Czx_ade[1:-1,1:-1]*self.Ezx[1:-1,1:-1] 
+            + self.Dzx_ade[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
+        )
+        # Source:
+        self.Ezx[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        self.Ezy[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        # Induced current
+        self.Ezx += self.Xx*self.Jc/2
+        self.Ezy += self.Xy*self.Jc/2
+        self.Ez = self.Ezx + self.Ezy
+        #Update Hy:
+        self.Hy[:,1:-1] = self.Cy[:,1:-1]*self.Hy[:,1:-1] + self.Dy[:,1:-1]/self.dx[:,np.newaxis]*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
+        #Update Hx:
+        self.Hx[1:-1,:] = self.Cx[1:-1,:]*self.Hx[1:-1,:] - self.Dx[1:-1,:]/self.dy[np.newaxis,:]*(self.Ez[1:-1,1:]-self.Ez[1:-1,:-1])
+        # Update Jc:
+        self.Jc = self.G*self.Jc + self.F*(self.Ez + self.Ez_old)
+        #Time step:
+        self.n += 1
+        self.recorded_Ez.append(self.Ez[self.xr,self.yr])
+        self.source_Ez.append(self.Ez[self.xs,self.ys])        
     
+    def update_drude(self):
+        # Update Ez:
+        self.Ez_old = self.Ez.copy()
+        self.Ez[1:-1,1:-1] = (
+            self.A_ade[1:-1,1:-1]*self.Ez[1:-1,1:-1] + 
+            self.B_ade[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
+            - self.B_ade[1:-1,1:-1]/self.dy_dual[np.newaxis,:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
+        )
+        # Source:
+        self.Ez[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
+        # Induced current
+        self.Ez += self.X*self.Jc
+        #Update Hy:
+        self.Hy[:,1:-1] = self.Hy[:,1:-1] + self.dt/(self.muy[:,1:-1]*self.dx[:,np.newaxis])*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
+        #Update Hx:
+        self.Hx[1:-1,:] = self.Hx[1:-1,:] - self.dt/(self.mux[1:-1,:]*self.dy[np.newaxis,:])*(self.Ez[1:-1,1:]-self.Ez[1:-1,:-1])
+        # Update Jc:
+        self.Jc = self.G*self.Jc + self.F*(self.Ez + self.Ez_old)
+        # Time step:
+        self.n += 1
+        self.recorded_Ez.append(self.Ez[self.xr,self.yr])
+        self.source_Ez.append(self.Ez[self.xs,self.ys])
+
     def update_loop(self,nt=None):
         if nt is None:
             nt = self.Nt
         for _ in range(nt):
-            if self.PML:
+            if self.PML and not self.drude:
                 self.update_PML()
+            elif self.PML and self.drude:
+                self.update_drude_PML()
+            elif self.drude:
+                self.update_drude()
             else:
                 self.update()
                 
