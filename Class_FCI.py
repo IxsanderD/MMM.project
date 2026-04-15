@@ -4,7 +4,6 @@ from scipy.sparse.linalg import splu, inv
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import time
 from scipy.special import hankel2
 
 class FCI:
@@ -21,10 +20,14 @@ class FCI:
         if drude:
             self.all_fields=np.zeros(8*Nx*Ny)
         else:
-            self.all_fields=np.zeros(6*Nx*Ny) # Voor ordening, kijk pagina 14 van de cursus
+            self.all_fields=np.zeros(6*Nx*Ny) 
         self.source_index=[]
-        self.eps=eps*np.ones(self.Nx*self.Ny) # Zelfde ordening als velden
-        self.mu=mu*np.ones(self.Nx*self.Ny) # Zelfde ordening als velden
+        self.J0 = []
+        self.tc = []
+        self.width = []
+        self.Wc = []
+        self.eps=eps*np.ones(self.Nx*self.Ny)
+        self.mu=mu*np.ones(self.Nx*self.Ny)
         self.c = 1/np.sqrt(np.min(eps)*np.min(mu))
         self.sigma=np.zeros(self.Nx*self.Ny)
         self.gamma=np.zeros(self.Nx*self.Ny)
@@ -33,12 +36,11 @@ class FCI:
         self.sigmamax=sigma_max
 
     def add_source(self,xs,ys,J0,tc,width,Wc):
-        self.xs = xs
-        self.ys = self.Ny - ys
-        self.J0 = J0
-        self.tc = tc
-        self.width = width
-        self.Wc = Wc
+        self.source_index.append((xs,ys))
+        self.J0.append(J0)
+        self.tc.append(tc)
+        self.width.append(width)
+        self.Wc.append(Wc)
         time = np.arange(self.Nt)*self.dt
         # self.applied_source = J0*np.exp(-(time-tc)**2/(2*width**2))
         self.applied_source = J0*np.sin(Wc*time)*np.exp(-(time-tc)**2/(2*width**2))
@@ -305,6 +307,12 @@ class FCI:
         S=bmat([[A00,A01,Z,Z,Z],[Z,-A16@A66_inv@A61+A17@A77_inv@A76@A66_inv@A61,A12,Z,A14],[Z,Z,A22,A23,Z],[A30,Z,Z,A33,Z],[-A45@A55_inv@A50,Z,Z,Z,A44]],format='csc')
         self.S_LU=splu(S)
 
+    def construct_matrices(self):
+        if self.drude:
+            self.construct_update_matrix_drude()
+        else:
+            self.construct_update_matrix()
+
     def restart(self):
         self.all_fields=np.zeros(6*self.Nx*self.Ny)
         self.n=0
@@ -312,8 +320,9 @@ class FCI:
     
     def update(self):
         b1=self.right_matrix[:3*self.Nx*self.Ny,:]@self.all_fields
-        b1[self.Nx*self.Ny+self.xs*self.Ny+self.ys]+=self.J0*np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
-        # b1[self.Nx*self.Ny+self.xs*self.Ny+self.ys]+=self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
+        for i in range(len(self.source_index)):
+            b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+            # b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
         b2=self.right_matrix[3*self.Nx*self.Ny:,:]@self.all_fields
         M22_inv_b2=self.M22_LU.solve(b2)
         self.all_fields[:3*self.Nx*self.Ny]=self.S_LU.solve(b1-self.M12@M22_inv_b2)
@@ -324,8 +333,9 @@ class FCI:
     
     def update_drude(self):
         b1=self.right_matrix[:5*self.Nx*self.Ny,:]@self.all_fields
-        b1[self.Nx*self.Ny+self.xs*self.Ny+self.ys]+=self.J0*np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
-        # b1[self.Nx*self.Ny+self.xs*self.Ny+self.ys]+=self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/(2*self.width**2))
+        for i in range(len(self.source_index)):
+            b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+            # b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
         b2=self.right_matrix[5*self.Nx*self.Ny:,:]@self.all_fields
         M22_inv_b2=self.M22_LU.solve(b2)
         self.all_fields[:5*self.Nx*self.Ny]=self.S_LU.solve(b1-self.M12@M22_inv_b2)
@@ -355,7 +365,8 @@ class FCI:
         ax.set_xlim(0,np.sum(self.dx))
         ax.set_ylim(0,np.sum(self.dy))
         ax.set_title('Ez')
-        source_marker, = ax.plot(sum(self.dx[:self.xs+1]), np.sum(self.dy) - sum(self.dy[:self.ys+1]), 'o', color='black', label='source', markersize=2, zorder=3)
+        for i in range(len(self.source_index)):
+            source_marker, = ax.plot(sum(self.dx[:self.source_index[i][0]+1]), np.sum(self.dy) - sum(self.dy[:self.source_index[i][1]+1]), 'o', color='black', label='source', markersize=2, zorder=3)
         rec1, = ax.plot(sum(self.dx[:self.xr+1]), np.sum(self.dy) - sum(self.dy[:self.yr+1]), 'x', color='red', label='recorder 1', zorder=3, markersize=6)
         def update(frame):
             if self.drude:

@@ -1,13 +1,9 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.constants import c, epsilon_0, mu_0
 from Class_FCI import FCI
 import time
-from scipy.sparse.linalg import lsqr
-from scipy.special import hankel2
 
 start=time.perf_counter()
-
 L = 1
 Nx=51
 Ny=51
@@ -36,12 +32,12 @@ m=4
 k_max=1
 sigma_max=100 #(m+1)/(150*np.pi*dx[0])
 
-xs = Nx//2
+xs = Nx//4
 ys = Ny//2
 
-solver=FCI(Nx,Ny,Nt,dx,dy,dt,eps,mu,k_max,sigma_max,drude=True)
-solver.add_material(3*Nx//5,4*Nx//5,3*Ny//5,4*Ny//5,1,1,1000,gamma=3)
-solver.construct_update_matrix_drude()
+solver=FCI(Nx,Ny,Nt,dx,dy,dt,eps,mu,k_max,sigma_max,drude=False)
+# solver.add_material(3*Nx//5,4*Nx//5,3*Ny//5,4*Ny//5,1,1,0)
+solver.construct_matrices()
 solver.add_source(xs,ys,J0,tc,width,Wc)
 solver.add_recorder(xs,ys)
 # # solver.update_loop()
