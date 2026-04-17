@@ -19,8 +19,8 @@ x0 = a/2+5
 sigma_x = a/5
 xr = 7*a/3+2*b+10
 
-m = 10
-n = 10
+m = 5
+n = 5
 
 m_eff = 0.023*m_e.value
 E = hbar.value**2/(2*m_eff)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)*10**18 # in J
@@ -53,15 +53,15 @@ print(f't_max: {t_max}')
 # With potential barriers:
 ###
 
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
 
-solver.add_barriers(U0)
-solver.add_recorder(xr)
-solver.animate(speed = 1000)
-solver.restart()
+# solver.add_barriers(U0)
+# solver.add_recorder(xr)
+# solver.animate(speed = 1000)
+# solver.restart()
 
-solver.update_loop_2()
-solver.show_recorder()
+# solver.update_loop_2()
+# solver.show_recorder()
 
 # # Current density:
 
@@ -109,3 +109,20 @@ solver.show_recorder()
 # # plt.ylim(0,1)
 # plt.legend()
 # plt.show()
+
+###
+# With potential V0
+###
+V0 = 0.05*e.value/10**18
+
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+
+solver.add_barriers(U0)
+solver.add_potential(V0)
+solver.plot_potential()
+solver.add_recorder(xr)
+solver.animate(speed = 1000)
+solver.restart()
+
+# solver.update_loop_2()
+# solver.show_recorder()

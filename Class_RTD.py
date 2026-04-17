@@ -65,8 +65,11 @@ class RTD:
         self.U[int((2*self.a+self.b+10)//self.dx):int((2*self.a+2*self.b+10)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
         
+    def add_potential(self,V0):
+        self.U[int((self.a+10)//self.dx):int((2*self.a+2*self.b+10)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx+1))
+        
     def plot_potential(self):
-        plt.plot(np.arange(self.Nx)*self.dx,self.U)
+        plt.plot(np.arange(self.Nx)*self.dx,self.U/e.value*10**18)
         plt.xlabel('x')
         plt.ylabel('U')
         plt.xlim(0,self.Lx)
@@ -173,6 +176,6 @@ class RTD:
     
     def J_freq(self,t,J_time): # To be continued
         f = np.fft.fftfreq(len(J_time), t[1]-t[0])
-        E = 2*np.pi*self.hbar*f[:len(f)//2]/e.value*1.6e14 # Random factor idk...
+        E = 2*np.pi*self.hbar*f[:len(f)//2] # Random factor? idk...
         J_freq = np.fft.fft(J_time)[:len(f)//2]
         return E, J_freq
