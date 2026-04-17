@@ -9,27 +9,29 @@ import cmath
 
 a = 15
 b = 5
-Lx = 3*a+2*b+10 # Extra space for barrier to not have an influence
+Lx = 3*a+2*b+20 # Extra space for barrier to not have an influence
 Ly = 40
 Lz = Ly
 dx = Lx/3000
 U0 = 0.6*e.value*10**(-18)
 dt = 0.8*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-x0 = a/2
-sigma_x = a/10
-xr = 7*a/3+2*b
+x0 = a/2+5
+sigma_x = a/5
+xr = 7*a/3+2*b+10
 
-m = 20
-n = 20
+m = 10
+n = 10
 
 m_eff = 0.023*m_e.value
 E = hbar.value**2/(2*m_eff)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)*10**18 # in J
 print(f'Energy: {E/e.value} eV')
 kx = np.sqrt(2*m_eff*E/hbar.value**2)*10**(-9) # in 1/nm
-sigma = 5*E*10**(-18) # maybe sqrt(E)? idk
+sigma = 5*np.sqrt(E)*10**(-27) # maybe sqrt(E)? idk
 k = 4 # exponent for the absorbing boundary strength
 N_layer = 200
-t_max = 8000
+t_max = 1e-5/np.sqrt(E)
+
+print(f't_max: {t_max}')
 
 ###
 # Without Absorbing Boundaries:
@@ -56,10 +58,10 @@ solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
 solver.add_barriers(U0)
 solver.add_recorder(xr)
 solver.animate(speed = 1000)
+solver.restart()
 
-# solver.restart()
-# solver.update_loop_2()
-# solver.show_recorder()
+solver.update_loop_2()
+solver.show_recorder()
 
 # # Current density:
 
@@ -99,10 +101,11 @@ solver.animate(speed = 1000)
 # E_num, J_free = solver.J_freq(t,J_time)
 
 # T_num = np.abs(J_barrier/J_free)
-# plt.plot(E_num/e.value*10**18,T_num,label='Numerical')
+# plt.plot(E_num,T_num,label='Numerical')
 # plt.plot(np.real(E_ana)/e.value*10**18,T_ana,label='Analytical')
 # plt.xlabel('Energy [eV]')
 # plt.ylabel('Transmission')
-# plt.xlim(0,0.6)
+# # plt.xlim(0,0.6)
+# # plt.ylim(0,1)
 # plt.legend()
 # plt.show()

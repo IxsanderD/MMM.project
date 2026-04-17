@@ -61,8 +61,8 @@ class RTD:
     
     def add_barriers(self,U0):
         self.U0 = U0
-        self.U[int(self.a//self.dx):int((self.a+self.b)//self.dx)] = U0
-        self.U[int((2*self.a+self.b)//self.dx):int((2*self.a+2*self.b)//self.dx)] = U0
+        self.U[int((self.a+10)//self.dx):int((self.a+self.b+10)//self.dx)] = U0
+        self.U[int((2*self.a+self.b+10)//self.dx):int((2*self.a+2*self.b+10)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
         
     def plot_potential(self):
@@ -83,7 +83,7 @@ class RTD:
         plt.plot(np.arange(len(self.psiRe_record_left))*self.dt,np.array(self.psiRe_record_left),label='Re')
         plt.plot(np.arange(len(self.psiIm_record_left))*self.dt,np.array(self.psiIm_record_left),label='Im')
         plt.xlabel('Time [s]')
-        plt.ylabel(r'$|\psi(x_r)|^2$')
+        plt.ylabel(r'$\psi(x_r)$')
         plt.legend()
         plt.show()
         
@@ -173,6 +173,6 @@ class RTD:
     
     def J_freq(self,t,J_time): # To be continued
         f = np.fft.fftfreq(len(J_time), t[1]-t[0])
-        E = 2*np.pi*self.hbar*f[:len(f)//2]/e.value*10**18
+        E = 2*np.pi*self.hbar*f[:len(f)//2]/e.value*1.6e14 # Random factor idk...
         J_freq = np.fft.fft(J_time)[:len(f)//2]
         return E, J_freq
