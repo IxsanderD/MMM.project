@@ -53,7 +53,7 @@ solver.animate()
 # xr = Nx//4
 # yr = Ny//4
 
-# solver=FCI(Nt,dx,dy,dt,eps,mu,k_max,sigma_max)
+# solver=FCI(Nt,dx,dy,dt,k_max,sigma_max)
 # solver.construct_update_matrix()
 # end=time.perf_counter()
 # print(f"Runtime: {end - start:.6f} seconds")
