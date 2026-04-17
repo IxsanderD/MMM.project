@@ -36,15 +36,17 @@ class FCI:
         self.kmax=k_max
         self.sigmamax=sigma_max
 
-    def add_source(self,xs,ys,J0,tc,w,Wc):
+    def add_source(self,xs,ys,J0,tc,w,Wc=None):
         self.source_index.append((xs,ys))
         self.J0.append(J0)
         self.tc.append(tc)
         self.width.append(w)
         self.Wc.append(Wc)
         time = np.arange(self.Nt)*self.dt
-        # self.applied_source = J0*np.exp(-(time-tc)**2/(2*width**2))
-        self.applied_source = J0*np.sin(Wc*time)*np.exp(-(time-tc)**2/(2*w**2))
+        if Wc==None:
+            self.applied_source = J0*np.exp(-(time-tc)**2/(2*w**2))
+        else:
+            self.applied_source = J0*np.sin(Wc*time)*np.exp(-(time-tc)**2/(2*w**2))
 
     def add_recorder(self,xr,yr):
         self.xr = xr
@@ -84,7 +86,7 @@ class FCI:
         K_x[self.Nx-10:,:]=np.repeat(k_array_v,self.Nx,axis=1)
         k_array_v=np.reshape(np.flip(k_array),(10,1))
         K_x[:10,:]=np.repeat(k_array_v,self.Nx,axis=1)
-        sigma_array=np.array([self.sigmamax*(i/10)**4 for i in range(1,11)]) # 5/150/np.pi/np.mean(self.dx)
+        sigma_array=np.array([self.sigmamax*(i/10)**4 for i in range(1,11)])
         sigma_y=np.zeros((self.Nx,self.Ny))
         sigma_y[:,self.Ny-10:]=np.tile(sigma_array,(self.Ny,1))
         sigma_y[:,:10]=np.tile(np.flip(sigma_array),(self.Ny,1))
@@ -322,8 +324,10 @@ class FCI:
     def update(self):
         b1=self.right_matrix[:3*self.Nx*self.Ny,:]@self.all_fields
         for i in range(len(self.source_index)):
-            b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
-            # b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+            if self.Wc[i]==None:
+                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+            else:
+                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
         b2=self.right_matrix[3*self.Nx*self.Ny:,:]@self.all_fields
         M22_inv_b2=self.M22_LU.solve(b2)
         self.all_fields[:3*self.Nx*self.Ny]=self.S_LU.solve(b1-self.M12@M22_inv_b2)
@@ -335,8 +339,10 @@ class FCI:
     def update_drude(self):
         b1=self.right_matrix[:5*self.Nx*self.Ny,:]@self.all_fields
         for i in range(len(self.source_index)):
-            b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
-            # b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+            if self.Wc[i]==None:
+                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+            else:
+                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
         b2=self.right_matrix[5*self.Nx*self.Ny:,:]@self.all_fields
         M22_inv_b2=self.M22_LU.solve(b2)
         self.all_fields[:5*self.Nx*self.Ny]=self.S_LU.solve(b1-self.M12@M22_inv_b2)
