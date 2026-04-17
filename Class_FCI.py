@@ -399,7 +399,6 @@ class FCI:
     def analytical_sol(self, p_all = True, f_lim = None):
 
         if p_all:
-            # Plot time domain response
             plt.plot(self.recorded_Ez, label='Electric field at recorder (V/m)')
             plt.plot(self.applied_source, label='Applied source ($A/m^2$)')
             plt.xlabel('Time (s)')
@@ -411,16 +410,13 @@ class FCI:
         source_freq = np.fft.rfft(self.applied_source)*self.dt
         omega = 2*np.pi*np.fft.rfftfreq(len(self.recorded_Ez), self.dt)
 
-        # Source and recorder distance
         delta_x = np.sum(self.dx[:self.xs]) - np.sum(self.dx[:self.xr])
         delta_y = np.sum(self.dy[:self.ys]) - np.sum(self.dy[:self.yr])
         print(delta_x, delta_y)
 
-        # Analytical solution
         E_freq_ana = -self.J0*omega/4*hankel2(0, omega/self.c*np.sqrt(delta_x**2+delta_y**2))
         E_freq_ana[0] = 0
 
-        # Restrict to bandwidth of the source
         E_max = np.max(np.abs(source_freq))
         if f_lim is None:
             mask = (np.abs(source_freq) > 0.005*E_max)
@@ -428,18 +424,15 @@ class FCI:
             mask = (omega <= f_lim)
 
         if p_all:
-            # Plot frequency domain response
             plt.plot(omega, np.abs(E_freq_sim), label='Electric field at recorder (V/m)')
             plt.plot(omega, np.abs(source_freq), label='Applied source current density ($A/m^2$)')
             plt.xlabel('Frequency (rad/s)')
             plt.legend()
             plt.title('Frequency domain response')
             plt.show()
-        
-        # Rescale
+
         E_freq_sim *= np.mean(np.abs(E_freq_ana[mask]/self.J0/E_freq_sim[mask]*source_freq[mask]))
 
-        # Compare with analytical solution
         plt.plot(omega[mask], np.abs(E_freq_sim/source_freq)[mask], label='Numerical response (rescaled)')
         plt.plot(omega[mask], np.abs(E_freq_ana/self.J0)[mask], label='Analytical response')
         plt.xlabel('Frequency (rad/s)')
