@@ -1,15 +1,16 @@
 import numpy as np
 from scipy.sparse import csr_array, diags, eye, kron, bmat
 from scipy.sparse.linalg import splu, inv
+from scipy.constants import epsilon_0, mu_0, c
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.special import hankel2
 
 class FCI:
-    def __init__(self,Nx,Ny,Nt,dx,dy,dt,eps,mu,k_max,sigma_max,drude=False):
-        self.Nx=Nx
-        self.Ny=Ny
+    def __init__(self,Nt,dx,dy,dt,k_max,sigma_max,drude=False):
+        self.Nx=len(dx)
+        self.Ny=len(dy)
         self.Nt=Nt
         self.dx=dx
         self.dy=dy
@@ -18,53 +19,53 @@ class FCI:
         self.dt=dt
         self.drude=drude
         if drude:
-            self.all_fields=np.zeros(8*Nx*Ny)
+            self.all_fields=np.zeros(8*self.Nx*self.Ny)
         else:
-            self.all_fields=np.zeros(6*Nx*Ny) 
+            self.all_fields=np.zeros(6*self.Nx*self.Ny) 
         self.source_index=[]
         self.J0 = []
         self.tc = []
         self.width = []
         self.Wc = []
-        self.eps=eps*np.ones(self.Nx*self.Ny)
-        self.mu=mu*np.ones(self.Nx*self.Ny)
-        self.c = 1/np.sqrt(np.min(eps)*np.min(mu))
+        self.eps=epsilon_0*np.ones(self.Nx*self.Ny)
+        self.mu=mu_0*np.ones(self.Nx*self.Ny)
+        self.c = c
         self.sigma=np.zeros(self.Nx*self.Ny)
         self.gamma=np.zeros(self.Nx*self.Ny)
         self.n=0
         self.kmax=k_max
         self.sigmamax=sigma_max
 
-    def add_source(self,xs,ys,J0,tc,width,Wc):
+    def add_source(self,xs,ys,J0,tc,w,Wc):
         self.source_index.append((xs,ys))
         self.J0.append(J0)
         self.tc.append(tc)
-        self.width.append(width)
+        self.width.append(w)
         self.Wc.append(Wc)
         time = np.arange(self.Nt)*self.dt
         # self.applied_source = J0*np.exp(-(time-tc)**2/(2*width**2))
-        self.applied_source = J0*np.sin(Wc*time)*np.exp(-(time-tc)**2/(2*width**2))
+        self.applied_source = J0*np.sin(Wc*time)*np.exp(-(time-tc)**2/(2*w**2))
 
     def add_recorder(self,xr,yr):
         self.xr = xr
         self.yr = self.Ny - yr
         self.recorded_Ez = []
 
-    def add_material(self,x_start,x_end,y_start,y_end,eps_r,mu_r,sigma,gamma=0):
+    def add_material(self,x_s,x_e,y_s,y_e,eps_r,mu_r,sigma,gamma=0):
         eps=np.reshape(self.eps,(self.Nx,self.Ny))
-        eps[x_start:x_end,y_start:y_end]=eps_r*self.eps[0]
+        eps[x_s:x_e,y_s:y_e]=eps_r*self.eps[0]
         self.eps=np.ravel(eps)
 
         mu=np.reshape(self.mu,(self.Nx,self.Ny))
-        mu[x_start:x_end,y_start:y_end]=mu_r*self.mu[0]
+        mu[x_s:x_e,y_s:y_e]=mu_r*self.mu[0]
         self.mu=np.ravel(mu)
 
         sig=np.reshape(self.sigma,(self.Nx,self.Ny))
-        sig[x_start:x_end,y_start:y_end]=sigma
+        sig[x_s:x_e,y_s:y_e]=sigma
         self.sigma=np.ravel(sig)
 
         gam=np.reshape(self.gamma,(self.Nx,self.Ny))
-        gam[x_start:x_end,y_start:y_end]=gamma
+        gam[x_s:x_e,y_s:y_e]=gamma
         self.gamma=np.ravel(gam)
     
     def construct_update_matrix(self):
@@ -375,7 +376,7 @@ class FCI:
                 self.update_loop(speed)
             Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
             im.set_data(Ez.T)
-            ax.set_title('Ez at t = {:.2f} s'.format(self.n*self.dt))
+            ax.set_title('Ez at t = {:.2f} µs'.format(self.n*self.dt*10**6))
             return [im,source_marker, rec1]
         
         ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt), repeat=repeat)
@@ -395,9 +396,9 @@ class FCI:
         plt.grid()
         plt.show()
 
-    def analytical_solution(self, plot_all = True, frequency_limit = None):
+    def analytical_sol(self, p_all = True, f_lim = None):
 
-        if plot_all:
+        if p_all:
             # Plot time domain response
             plt.plot(self.recorded_Ez, label='Electric field at recorder (V/m)')
             plt.plot(self.applied_source, label='Applied source ($A/m^2$)')
@@ -421,12 +422,12 @@ class FCI:
 
         # Restrict to bandwidth of the source
         E_max = np.max(np.abs(source_freq))
-        if frequency_limit is None:
+        if f_lim is None:
             mask = (np.abs(source_freq) > 0.005*E_max)
         else:
-            mask = (omega <= frequency_limit)
+            mask = (omega <= f_lim)
 
-        if plot_all:
+        if p_all:
             # Plot frequency domain response
             plt.plot(omega, np.abs(E_freq_sim), label='Electric field at recorder (V/m)')
             plt.plot(omega, np.abs(source_freq), label='Applied source current density ($A/m^2$)')
