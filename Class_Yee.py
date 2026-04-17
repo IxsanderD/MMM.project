@@ -6,7 +6,7 @@ from matplotlib.patches import Rectangle
 from scipy.special import hankel2
 
 class Yee:
-    def __init__(self,L,Nx,Ny,Nt,dt,N_PML,m,PML=False,sigma_max=246.558,kappa_max=4.221):
+    def __init__(self,L,Nx,Ny,Nt,dt,N_PML,PML=False,m=4,sigma_max=246.558,kappa_max=4.221):
         self.L = L
         self.Nx = Nx
         self.Ny = Ny

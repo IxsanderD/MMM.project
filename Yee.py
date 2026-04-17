@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from Class_Yee import Yee
 from scipy.special import hankel2
 
-L = 1
+L = 2
 Nx = 300
 Ny = 300
 c = 1
@@ -21,12 +21,11 @@ xr = Nx//4
 yr = Ny//4
 
 N_PML = 20
-m = 4
 
 ###
 # Without PML
 ###
-# solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=False)
+# solver = Yee(L,Nx,Ny,Nt,dt,N_PML,PML=False)
 # solver.add_source(xs,ys,J0,tc,width,Wc)
 # solver.add_recorder(xr,yr)
 
@@ -40,7 +39,7 @@ m = 4
 ###
 # With PML
 ###
-# solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
+# solver = Yee(L,Nx,Ny,Nt,dt,N_PML,PML=True)
 # solver.add_source(xs,ys,J0,tc,width,Wc)
 # solver.add_recorder(xr,yr)
 
@@ -57,7 +56,7 @@ m = 4
 # Analytical verification
 ###
 
-# solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
+# solver = Yee(L,Nx,Ny,Nt,dt,N_PML,PML=True)
 # solver.add_source(xs,ys,J0,tc,width,Wc)
 # solver.add_recorder(xr,yr)
 # solver.update_loop()
@@ -68,7 +67,7 @@ m = 4
 # With matreial
 ###
 
-solver = Yee(L,Nx,Ny,Nt,dt,N_PML,m,PML=True)
+solver = Yee(L,Nx,Ny,Nt,dt,N_PML,PML=True)
 solver.add_source(xs,ys,J0,tc,width,Wc)
 
 # # Plot source in time and frequency domain
@@ -93,6 +92,6 @@ solver.add_drude_material(3*Nx//4,4*Nx//5,Ny//4,3*Ny//4,eps_r=1,sigma_DC=100,gam
 solver.animate(speed = 10)
 # solver.restart()
 
-# solver.update_loop()
-# solver.show_recorder()
-# solver.restart()
+solver.update_loop()
+solver.show_recorder()
+solver.restart()
