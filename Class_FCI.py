@@ -35,6 +35,12 @@ class FCI:
         self.n=0
         self.kmax=k_max
         self.sigmamax=sigma_max
+        self.materials = []
+
+    def restart(self):
+        self.all_fields=np.zeros(6*self.Nx*self.Ny)
+        self.n=0
+        self.recorded_Ez = []
 
     def add_source(self,xs,ys,J0,tc,w,Wc=None):
         self.source_index.append((xs,ys))
@@ -69,6 +75,8 @@ class FCI:
         gam=np.reshape(self.gamma,(self.Nx,self.Ny))
         gam[x_s:x_e,y_s:y_e]=gamma
         self.gamma=np.ravel(gam)
+
+        self.materials.append((x_s, x_e, y_s, y_e))
     
     def construct_update_matrix(self):
         Dx=-diags(np.ones(self.Nx),offsets=0,format='csr')+diags(np.ones(self.Nx-1),offsets=1,format='csr')+diags(np.ones(1),offsets=-self.Nx+1,format='csr')
@@ -315,11 +323,6 @@ class FCI:
             self.construct_update_matrix_drude()
         else:
             self.construct_update_matrix()
-
-    def restart(self):
-        self.all_fields=np.zeros(6*self.Nx*self.Ny)
-        self.n=0
-        self.recorded_Ez = []
     
     def update(self):
         b1=self.right_matrix[:3*self.Nx*self.Ny,:]@self.all_fields
@@ -363,28 +366,43 @@ class FCI:
         for _ in range(nt):
             self.update_drude()
 
-    def animate(self,speed=1,repeat=False):
-        Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
+    def animate(self, speed=1, repeat=False):
+        Ez = np.reshape(self.all_fields[:self.Nx*self.Ny], (self.Nx, self.Ny))
+        
+        x_edges = np.concatenate([[0], np.cumsum(self.dx)])
+        y_edges = np.concatenate([[0], np.cumsum(self.dy)])
+        
         fig, ax = plt.subplots()
-        im = ax.imshow(Ez.T,cmap='RdBu_r',extent=(0,np.sum(self.dx),0,np.sum(self.dy)),vmin=-0.05,vmax=0.05)
+        im = ax.pcolormesh(x_edges, y_edges, Ez.T, cmap='RdBu_r', vmin=-0.05, vmax=0.05)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-        ax.set_xlim(0,np.sum(self.dx))
-        ax.set_ylim(0,np.sum(self.dy))
         ax.set_title('Ez')
+
+        for mat in self.materials:
+            x_start, x_end, y_start, y_end = mat
+            x0 = np.sum(self.dx[:x_start])
+            x1 = np.sum(self.dx[:x_end])
+            y0 = np.sum(self.dy[:y_start])
+            y1 = np.sum(self.dy[:y_end])
+            width = x1 - x0
+            height = y1 - y0
+            rect = plt.Rectangle((x0, y0), width, height,  linewidth=1, edgecolor='black', facecolor='none', zorder=2)
+            ax.add_patch(rect)
+
         for i in range(len(self.source_index)):
-            source_marker, = ax.plot(sum(self.dx[:self.source_index[i][0]+1]), np.sum(self.dy) - sum(self.dy[:self.source_index[i][1]+1]), 'o', color='black', label='source', markersize=2, zorder=3)
-        rec1, = ax.plot(sum(self.dx[:self.xr+1]), np.sum(self.dy) - sum(self.dy[:self.yr+1]), 'x', color='red', label='recorder 1', zorder=3, markersize=6)
+            source_marker, = ax.plot(sum(self.dx[:self.source_index[i][0]]), sum(self.dy[:self.source_index[i][1]]), 'o', color='black', label='source', markersize=2, zorder=3)
+            rec1, = ax.plot(sum(self.dx[:self.xr]), sum(self.dy[:self.yr]), 'x', color='red', label='recorder 1', zorder=3, markersize=6)
+
         def update(frame):
             if self.drude:
                 self.update_loop_drude(speed)
             else:
                 self.update_loop(speed)
-            Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
-            im.set_data(Ez.T)
-            ax.set_title('Ez at t = {:.2f} µs'.format(self.n*self.dt*10**6))
-            return [im,source_marker, rec1]
-        
+            Ez = np.reshape(self.all_fields[:self.Nx*self.Ny], (self.Nx, self.Ny))
+            im.set_array(Ez.T.ravel())
+            ax.set_title('Ez at t = {:.2f} µs'.format(self.n*self.dt*1e6))
+            return [im, source_marker, rec1]
+
         ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt), repeat=repeat)
         # ani.save("simulation.gif", writer="pillow", fps=10)
         divider = make_axes_locatable(ax)
