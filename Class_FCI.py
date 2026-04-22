@@ -27,9 +27,9 @@ class FCI:
         self.tc = []
         self.width = []
         self.Wc = []
-        self.eps=epsilon_0*np.ones(self.Nx*self.Ny)
-        self.mu=mu_0*np.ones(self.Nx*self.Ny)
-        self.c = c
+        self.eps=np.ones(self.Nx*self.Ny)
+        self.mu=np.ones(self.Nx*self.Ny)
+        self.c = 1
         self.sigma=np.zeros(self.Nx*self.Ny)
         self.gamma=np.zeros(self.Nx*self.Ny)
         self.n=0
@@ -87,22 +87,22 @@ class FCI:
         delta_y_inv=diags(1/self.dy,offsets=0,format='csr')
         k_array=np.array([1+(self.kmax-1)*(i/10)**4 for i in range(1,11)])
         K_y=np.ones((self.Nx,self.Ny))
-        K_y[:,self.Ny-10:]=np.tile(k_array,(self.Ny,1))
-        K_y[:,:10]=np.tile(np.flip(k_array),(self.Ny,1))
+        K_y[:,self.Ny-10:]=np.tile(k_array,(self.Nx,1))
+        K_y[:,:10]=np.tile(np.flip(k_array),(self.Nx,1))
         K_x=np.ones((self.Nx,self.Ny))
         k_array_v=np.reshape(k_array,(10,1))
-        K_x[self.Nx-10:,:]=np.repeat(k_array_v,self.Nx,axis=1)
+        K_x[self.Nx-10:,:]=np.repeat(k_array_v,self.Ny,axis=1)
         k_array_v=np.reshape(np.flip(k_array),(10,1))
-        K_x[:10,:]=np.repeat(k_array_v,self.Nx,axis=1)
+        K_x[:10,:]=np.repeat(k_array_v,self.Ny,axis=1)
         sigma_array=np.array([self.sigmamax*(i/10)**4 for i in range(1,11)])
         sigma_y=np.zeros((self.Nx,self.Ny))
-        sigma_y[:,self.Ny-10:]=np.tile(sigma_array,(self.Ny,1))
-        sigma_y[:,:10]=np.tile(np.flip(sigma_array),(self.Ny,1))
+        sigma_y[:,self.Ny-10:]=np.tile(sigma_array,(self.Nx,1))
+        sigma_y[:,:10]=np.tile(np.flip(sigma_array),(self.Nx,1))
         sigma_array_v=np.reshape(sigma_array,(10,1))
         sigma_x=np.zeros((self.Nx,self.Ny))
-        sigma_x[self.Nx-10:,:]=np.repeat(sigma_array_v,self.Nx,axis=1)
+        sigma_x[self.Nx-10:,:]=np.repeat(sigma_array_v,self.Ny,axis=1)
         sigma_array_v=np.reshape(np.flip(sigma_array),(10,1))
-        sigma_x[:10,:]=np.repeat(sigma_array_v,self.Nx,axis=1)
+        sigma_x[:10,:]=np.repeat(sigma_array_v,self.Ny,axis=1)
 
         K_y=np.ravel(K_y)
         K_y_dt=diags(K_y,offsets=0,format='csr')/self.dt
@@ -376,6 +376,7 @@ class FCI:
         im = ax.pcolormesh(x_edges, y_edges, Ez.T, cmap='RdBu_r', vmin=-0.05, vmax=0.05)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
+        ax.set_aspect('equal')
         ax.set_title('Ez')
 
         for mat in self.materials:
