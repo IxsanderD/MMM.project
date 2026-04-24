@@ -6,9 +6,9 @@ import time
 
 # start=time.perf_counter()
 L = 100
-Nx=51
-Ny=51
-Nt=100
+Nx=201
+Ny=201
+Nt=300
 dx=np.ones(Nx)*L/Nx
 dy=np.ones(Ny)*L/Ny
 c0=1
@@ -30,7 +30,7 @@ xs = Nx//2
 ys = Ny//2
 
 solver=FCI(Nt,dx,dy,dt,k_max,sigma_max,drude=False)
-solver.add_material(3*Nx//5,4*Nx//5,3*Ny//5,4*Ny//5,1,1,1000)
+# solver.add_material(3*Nx//5,4*Nx//5,3*Ny//5,4*Ny//5,1,1,1000)
 solver.construct_matrices()
 solver.add_source(xs,ys,J0,tc,width,Wc)
 solver.add_recorder(xs+Nx//4,ys)

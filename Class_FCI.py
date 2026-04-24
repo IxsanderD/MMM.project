@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.special import hankel2
+import time
 
 class FCI:
     def __init__(self,Nt,dx,dy,dt,k_max,sigma_max,drude=False):
@@ -104,13 +105,16 @@ class FCI:
         sigma_array_v=np.reshape(np.flip(sigma_array),(10,1))
         sigma_x[:10,:]=np.repeat(sigma_array_v,self.Ny,axis=1)
 
-        K_y=np.ravel(K_y)
-        K_y_dt=diags(K_y,offsets=0,format='csr')/self.dt
         K_x=np.ravel(K_x)
-        K_x_dt=diags(K_x,offsets=0,format='csr')/self.dt
+        K_y=np.ravel(K_y)
         sigma_x=np.ravel(sigma_x)
-        sigma_x_2=diags(sigma_x,offsets=0,format='csr')/2
         sigma_y=np.ravel(sigma_y)
+        b_x_inv=1/(K_x/self.dt+sigma_x/2/self.eps)
+        b_y_inv=1/(K_y/self.dt+sigma_y/2/self.eps)
+
+        K_y_dt=diags(K_y,offsets=0,format='csr')/self.dt
+        K_x_dt=diags(K_x,offsets=0,format='csr')/self.dt
+        sigma_x_2=diags(sigma_x,offsets=0,format='csr')/2
         sigma_y_2=diags(sigma_y,offsets=0,format='csr')/2
         eps=diags(self.eps,offsets=0,format='csr')
         eps_inv=diags(1/self.eps,offsets=0,format='csr')
@@ -121,71 +125,71 @@ class FCI:
         A_y=kron(Ax,np.eye(self.Ny),format='csr')
         A_z=kron(Ax,Ay,format='csr')
 
-        # block (0,0)
-        A00=-A_z@(K_y_dt+sigma_y_2@eps_inv)
-        B00=-A_z@(K_y_dt-sigma_y_2@eps_inv)
-
-        # block (0,1)
-        A01=A_z/self.dt
-        B01=A01
-
-        # block (1,1)
-        A11=A_z@(eps@K_x_dt+sigma_x_2+sigma/2)
-        B11=A_z@(eps@K_x_dt-sigma_x_2-sigma/2)
-
-        # block (1,2)
-        A12=kron(Ax,delta_y_inv@Dy,format='csr')/2
-        B12=-kron(Ax,delta_y_inv@Dy,format='csr')/2
-
-        # block (1,4)
-        A14=-kron(delta_x_inv@Dx,Ay,format='csr')/2
-        B14=kron(delta_x_inv@Dx,Ay,format='csr')/2
-
-        # block (2,2)
-        A22=-A_x/self.dt
-        B22=-A_x/self.dt
-
-        # block (2,3)
-        A23=A_x@(K_x_dt+sigma_x_2@eps_inv)
-        B23=A_x@(K_x_dt-sigma_x_2@eps_inv)
-
         # block (3,0)
-        A30=kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')/2
-        B30=-kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')/2
+        A30=-(K_y_dt+sigma_y_2@eps_inv)
+        B30=-(K_y_dt-sigma_y_2@eps_inv)
 
         # block (3,3)
-        A33=A_x@(mu@K_y_dt+mu@sigma_y_2@eps_inv)
-        B33=A_x@(mu@K_y_dt-mu@sigma_y_2@eps_inv)
+        A33=eye(self.Nx*self.Ny,format='csr')/self.dt
+        B33=eye(self.Nx*self.Ny,format='csr')/self.dt
+
+        # block (2,3)
+        A23=A_z@(eps@K_x_dt+sigma_x_2+sigma/2)
+        B23=A_z@(eps@K_x_dt-sigma_x_2-sigma/2)
+
+        # block (2,1)
+        A21=kron(Ax,delta_y_inv@Dy,format='csr')/2
+        B21=-kron(Ax,delta_y_inv@Dy,format='csr')/2
+
+        # block (2,2)
+        A22=-kron(delta_x_inv@Dx,Ay,format='csr')/2
+        B22=kron(delta_x_inv@Dx,Ay,format='csr')/2
+
+        # block (4,1)
+        A41=-eye(self.Nx*self.Ny,format='csr')/self.dt
+        B41=-eye(self.Nx*self.Ny,format='csr')/self.dt
 
         # block (4,4)
-        A44=-A_y@(K_x_dt+sigma_x_2@eps_inv)
-        B44=-A_y@(K_x_dt-sigma_x_2@eps_inv)
+        A44=K_x_dt+sigma_x_2@eps_inv
+        B44=K_x_dt-sigma_x_2@eps_inv
 
-        # block (4,5)
-        A45=A_y@(K_y_dt+sigma_y_2@eps_inv)
-        B45=A_y@(K_y_dt-sigma_y_2@eps_inv)
+        # block (0,0)
+        A00=kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')/2
+        B00=-kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')/2
 
-        # block (5,0)
-        A50=-kron(delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')/2
-        B50=kron(delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')/2
+        # block (0,4)
+        A04=A_x@(mu@K_y_dt+mu@sigma_y_2@eps_inv)
+        B04=A_x@(mu@K_y_dt-mu@sigma_y_2@eps_inv)
+
+        # block (5,2)
+        A52=-(K_x_dt+sigma_x_2@eps_inv)
+        B52=-(K_x_dt-sigma_x_2@eps_inv)
 
         # block (5,5)
-        A55=A_y@mu/self.dt
-        B55=A_y@mu/self.dt
+        A55=(K_y_dt+sigma_y_2@eps_inv)
+        B55=(K_y_dt-sigma_y_2@eps_inv)
+
+        # block (1,0)
+        A10=-kron(delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')/2
+        B10=kron(delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')/2
+
+        # block (1,5)
+        A15=A_y@mu/self.dt
+        B15=A_y@mu/self.dt
 
         Z=csr_array((self.Nx*self.Ny, self.Nx*self.Ny))
 
-        self.M11=bmat([[A00,A01,Z],[Z,A11,A12],[Z,Z,A22]],format='csr')
-        self.M12=bmat([[Z,Z,Z],[Z,A14,Z],[A23,Z,Z]],format='csr')
-        self.M21=bmat([[A30,Z,Z],[Z,Z,Z],[A50,Z,Z]],format='csr')
-        self.M22=bmat([[A33,Z,Z],[Z,A44,A45],[Z,Z,A55]],format='csc')
-        self.right_matrix=bmat([[B00,B01,Z,Z,Z,Z],[Z,B11,B12,Z,B14,Z],[Z,Z,B22,B23,Z,Z],[B30,Z,Z,B33,Z,Z],[Z,Z,Z,Z,B44,B45],[B50,Z,Z,Z,Z,B55]],format='csr')
+        self.M11=bmat([[A00,Z,Z],[A10,Z,Z],[Z,A21,A22]],format='csr')
+        self.M12=bmat([[Z,A04,Z],[Z,Z,A15],[A23,Z,Z]],format='csr')
+        self.M21=bmat([[A30,Z,Z],[Z,A41,Z],[Z,Z,A52]],format='csr')
+        self.M22=bmat([[A33,Z,Z],[Z,A44,Z],[Z,Z,A55]],format='csc')
+        self.right_matrix=bmat([[B00,Z,Z,Z,B04,Z],[B10,Z,Z,Z,Z,B15],[Z,B21,B22,B23,Z,Z],[B30,Z,Z,B33,Z,Z],[Z,B41,Z,Z,B44,Z],[Z,Z,B52,Z,Z,B55]],format='csr')
         
-        A33_inv=inv(A33.tocsc()).tocsr()
-        A44_inv=inv(A44.tocsc()).tocsr()
-        A55_inv=inv(A55.tocsc()).tocsr()
         self.M22_LU=splu(self.M22)
-        S=bmat([[A00,A01,Z],[A14@A44_inv@A45@A55_inv@A50,A11,A12],[-A23@A33_inv@A30,Z,A22]],format='csc')
+        A33_inv=eye(self.Nx*self.Ny,format='csr')*self.dt
+        A44_inv=diags(b_x_inv,offsets=0,format='csr')
+        A55_inv=diags(b_y_inv,offsets=0,format='csr')
+        S=bmat([[A00,-A04@A44_inv@A41,Z],[A10,Z,-A15@A55_inv@A52],[-A23@A33_inv@A30,A21,A22]],format='csc')
         self.S_LU=splu(S)
 
     def construct_update_matrix_drude(self):
@@ -328,9 +332,9 @@ class FCI:
         b1=self.right_matrix[:3*self.Nx*self.Ny,:]@self.all_fields
         for i in range(len(self.source_index)):
             if self.Wc[i]==None:
-                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+                b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
             else:
-                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+                b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
         b2=self.right_matrix[3*self.Nx*self.Ny:,:]@self.all_fields
         M22_inv_b2=self.M22_LU.solve(b2)
         self.all_fields[:3*self.Nx*self.Ny]=self.S_LU.solve(b1-self.M12@M22_inv_b2)
