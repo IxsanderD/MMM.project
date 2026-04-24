@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.constants import c
 from Class_FCI import FCI
 from Class_Yee import Yee
+import time
 
 L = 1
 Nx = 300
@@ -70,9 +71,9 @@ Nt = int(20*tc/dt)
 # plt.show()
 
 Lx = 1
-Nx = 151
-Ny = 41
-Nt = 400
+Nx = 201
+Ny = 201
+Nt = 300
 c = 1
 J0 = 10
 width = 5/Wc
@@ -90,7 +91,7 @@ fig,axes = plt.subplots(4,1,figsize=(6,10))
 i = 0
 colors = ['blue', 'orange', 'green', 'red']
 
-for d in [30]:
+for d in [30,40,50,60]:
     
     xs = Nx//4
     ys = Ny//2
@@ -104,7 +105,10 @@ for d in [30]:
     solver = FCI(Nt,dx,dy,dt,1,1000)
     solver.add_source(xs,ys,J0,tc,width,Wc)
     solver.add_recorder(xr,yr)
+    start=time.perf_counter()
     solver.construct_matrices()
+    end=time.perf_counter()
+    print(end-start)
     # solver.animate(speed = 10)
     solver.update_loop()
     # solver.show_recorder()
