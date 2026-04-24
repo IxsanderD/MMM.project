@@ -218,13 +218,16 @@ class FCI:
         sigma_array_v=np.reshape(np.flip(sigma_array),(10,1))
         sigma_x[:10,:]=np.repeat(sigma_array_v,self.Nx,axis=1)
 
-        K_y=np.ravel(K_y)
-        K_y_dt=diags(K_y,offsets=0,format='csr')/self.dt
         K_x=np.ravel(K_x)
-        K_x_dt=diags(K_x,offsets=0,format='csr')/self.dt
+        K_y=np.ravel(K_y)
         sigma_x=np.ravel(sigma_x)
-        sigma_x_2=diags(sigma_x,offsets=0,format='csr')/2
         sigma_y=np.ravel(sigma_y)
+        b_x_inv=1/(K_x/self.dt+sigma_x/2/self.eps)
+        b_y_inv=1/(K_y/self.dt+sigma_y/2/self.eps)
+
+        K_y_dt=diags(K_y,offsets=0,format='csr')/self.dt
+        K_x_dt=diags(K_x,offsets=0,format='csr')/self.dt
+        sigma_x_2=diags(sigma_x,offsets=0,format='csr')/2
         sigma_y_2=diags(sigma_y,offsets=0,format='csr')/2
         eps=diags(self.eps,offsets=0,format='csr')
         eps_inv=diags(1/self.eps,offsets=0,format='csr')
@@ -236,91 +239,95 @@ class FCI:
         A_y=kron(Ax,np.eye(self.Ny),format='csr')
         A_z=kron(Ax,Ay,format='csr')
 
-        # block (0,0)
-        A00=-A_z@(K_y_dt+sigma_y_2@eps_inv)
-        B00=-A_z@(K_y_dt-sigma_y_2@eps_inv)
+        # block (7,7)
+        A77=-(K_y_dt+sigma_y_2@eps_inv)
+        B77=-(K_y_dt-sigma_y_2@eps_inv)
 
-        # block (0,1)
-        A01=A_z/self.dt
-        B01=A01
+        # block (7,4)
+        A74=eye(self.Nx*self.Ny,format='csr')/self.dt
+        B74=eye(self.Nx*self.Ny,format='csr')/self.dt
 
-        # block (1,2)
-        A12=kron(Ax,delta_y_inv@Dy,format='csr')/2
-        B12=-kron(Ax,delta_y_inv@Dy,format='csr')/2
-
-        # block (1,4)
-        A14=-kron(delta_x_inv@Dx,Ay,format='csr')/2
-        B14=kron(delta_x_inv@Dx,Ay,format='csr')/2
+        # block (1,5)
+        A15=kron(Ax,delta_y_inv@Dy,format='csr')/2
+        B15=-kron(Ax,delta_y_inv@Dy,format='csr')/2
 
         # block (1,6)
-        A16=A_z@eps/self.dt
-        B16=A_z@eps/self.dt
+        A16=-kron(delta_x_inv@Dx,Ay,format='csr')/2
+        B16=kron(delta_x_inv@Dx,Ay,format='csr')/2
 
-        # block (1,7)
-        A17=A_z/2
-        B17=-A_z/2
+        # block (1,1)
+        A11=A_z@eps/self.dt
+        B11=A_z@eps/self.dt
 
-        # block (2,2)
-        A22=-A_x/self.dt
-        B22=-A_x/self.dt
-
-        # block (2,3)
-        A23=A_x@(K_x_dt+sigma_x_2@eps_inv)
-        B23=A_x@(K_x_dt-sigma_x_2@eps_inv)
-
-        # block (3,0)
-        A30=kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')/2
-        B30=-kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')/2
-
-        # block (3,3)
-        A33=A_x@(mu@K_y_dt+mu@sigma_y_2@eps_inv)
-        B33=A_x@(mu@K_y_dt-mu@sigma_y_2@eps_inv)
-
-        # block (4,4)
-        A44=-A_y@(K_x_dt+sigma_x_2@eps_inv)
-        B44=-A_y@(K_x_dt-sigma_x_2@eps_inv)
-
-        # block (4,5)
-        A45=A_y@(K_y_dt+sigma_y_2@eps_inv)
-        B45=A_y@(K_y_dt-sigma_y_2@eps_inv)
-
-        # block (5,0)
-        A50=-kron(delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')/2
-        B50=kron(delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')/2
+        # block (1,0)
+        A10=A_z/2
+        B10=-A_z/2
 
         # block (5,5)
-        A55=A_y@mu/self.dt
-        B55=A_y@mu/self.dt
+        A55=-eye(self.Nx*self.Ny,format='csr')/self.dt
+        B55=-eye(self.Nx*self.Ny,format='csr')/self.dt
 
-        # block (6,1)
-        A61=-A_z@(K_x_dt+sigma_x_2@eps_inv)
-        B61=-A_z@(K_x_dt-sigma_x_2@eps_inv)
+        # block (5,2)
+        A52=(K_x_dt+sigma_x_2@eps_inv)
+        B52=(K_x_dt-sigma_x_2@eps_inv)
+
+        # block (2,7)
+        A27=kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')/2
+        B27=-kron(eye(self.Nx,format='csr'),delta_y_inv@Dy,format='csr')/2
+
+        # block (2,2)
+        A22=A_x@(mu@K_y_dt+mu@sigma_y_2@eps_inv)
+        B22=A_x@(mu@K_y_dt-mu@sigma_y_2@eps_inv)
 
         # block (6,6)
-        A66=A_z/self.dt
-        B66=A_z/self.dt
+        A66=-(K_x_dt+sigma_x_2@eps_inv)
+        B66=-(K_x_dt-sigma_x_2@eps_inv)
 
-        # Block (7,6)
-        A76=A_z@sigma/2
-        B76=-A_z@sigma/2
+        # block (6,3)
+        A63=(K_y_dt+sigma_y_2@eps_inv)
+        B63=(K_y_dt-sigma_y_2@eps_inv)
 
-        # Block (7,7)
-        A77=-A_z@(gamma/self.dt)-A_z/2
-        B77=-A_z@(gamma/self.dt)+A_z/2
+        # block (3,7)
+        A37=-kron(delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')/2
+        B37=kron(delta_x_inv@Dx,eye(self.Ny,format='csr'),format='csr')/2
+
+        # block (3,3)
+        A33=A_y@mu/self.dt
+        B33=A_y@mu/self.dt
+
+        # block (4,4)
+        A44=-(K_x_dt+sigma_x_2@eps_inv)
+        B44=-(K_x_dt-sigma_x_2@eps_inv)
+
+        # block (4,1)
+        A41=eye(self.Nx*self.Ny,format='csr')/self.dt
+        B41=eye(self.Nx*self.Ny,format='csr')/self.dt
+
+        # Block (0,1)
+        A01=sigma/2
+        B01=-sigma/2
+
+        # Block (0,0)
+        A00=-(gamma/self.dt)-eye(self.Nx*self.Ny,format='csr')/2
+        B00=-(gamma/self.dt)+eye(self.Nx*self.Ny,format='csr')/2
 
         Z=csr_array((self.Nx*self.Ny, self.Nx*self.Ny))
 
-        self.M11=bmat([[A00,A01,Z,Z,Z],[Z,Z,A12,Z,A14],[Z,Z,A22,A23,Z],[A30,Z,Z,A33,Z],[Z,Z,Z,Z,A44]],format='csr')
-        self.M12=bmat([[Z,Z,Z],[Z,A16,A17],[Z,Z,Z],[Z,Z,Z],[A45,Z,Z]],format='csr')
-        self.M21=bmat([[A50,Z,Z,Z,Z],[Z,A61,Z,Z,Z],[Z,Z,Z,Z,Z]],format='csr')
-        self.M22=bmat([[A55,Z,Z],[Z,A66,Z],[Z,A76,A77]],format='csc')
-        self.right_matrix=bmat([[B00,B01,Z,Z,Z,Z,Z,Z],[Z,Z,B12,Z,B14,Z,B16,B17],[Z,Z,B22,B23,Z,Z,Z,Z],[B30,Z,Z,B33,Z,Z,Z,Z],[Z,Z,Z,Z,B44,B45,Z,Z],[B50,Z,Z,Z,Z,B55,Z,Z],[Z,B61,Z,Z,Z,Z,B66,Z],[Z,Z,Z,Z,Z,Z,B76,B77]],format='csr')
-        A55_inv=inv(A55.tocsc()).tocsr()
-        A66_inv=inv(A66.tocsc()).tocsr()
-        A77_inv=inv(A77.tocsc()).tocsr()
+        self.M11=bmat([[A00,A01,Z,Z],[A10,A11,Z,Z],[Z,Z,A22,Z],[Z,Z,Z,A33]],format='csr')
+        self.M12=bmat([[Z,Z,Z,Z],[Z,A15,A16,Z],[Z,Z,Z,A27],[Z,Z,Z,A37]],format='csr')
+        self.M21=bmat([[Z,A41,Z,Z],[Z,Z,A52,Z],[Z,Z,Z,A63],[Z,Z,Z,Z]],format='csr')
+        self.M22=bmat([[A44,Z,Z,Z],[Z,A55,Z,Z],[Z,Z,A66,Z],[A74,Z,Z,A77]],format='csc')
+        self.right_matrix=bmat([[B00,B01,Z,Z,Z,Z,Z,Z],[B10,B11,Z,Z,Z,B15,B16,Z],[Z,Z,B22,Z,Z,Z,Z,B27],[Z,Z,Z,B33,Z,Z,Z,B37],[Z,B41,Z,Z,B44,Z,Z,Z],[Z,Z,B52,Z,Z,B55,Z,Z],[Z,Z,Z,B63,Z,Z,B66,Z],[Z,Z,Z,Z,B74,Z,Z,B77]],format='csr')
+        self.A00_inv=-diags(1/(self.gamma/self.dt+1/2),offsets=0,format='csr')
+        A44_inv=-diags(b_x_inv,offsets=0,format='csr')
+        A55_inv=-eye(self.Nx*self.Ny,format='csr')*self.dt
+        A66_inv=-diags(b_x_inv,offsets=0,format='csr')
+        A77_inv=-diags(b_y_inv,offsets=0,format='csr')
         self.M22_LU=splu(self.M22)
-        S=bmat([[A00,A01,Z,Z,Z],[Z,-A16@A66_inv@A61+A17@A77_inv@A76@A66_inv@A61,A12,Z,A14],[Z,Z,A22,A23,Z],[A30,Z,Z,A33,Z],[-A45@A55_inv@A50,Z,Z,Z,A44]],format='csc')
-        self.S_LU=splu(S)
+        self.S12=bmat([[A01,Z,Z]],format='csr')
+        self.S21=bmat([[A10],[Z],[Z]],format='csr')
+        Ss=bmat([[A11-A10@self.A00_inv@A01,-A15@A55_inv@A52,-A16@A66_inv@A52],[A27@A77_inv@A74@A44_inv@A41,A22,Z],[A37@A77_inv@A74@A44_inv@A41,Z,A33]],format='csc')
+        self.Ss_LU=splu(Ss)
 
     def construct_matrices(self):
         if self.drude:
@@ -332,7 +339,7 @@ class FCI:
         b1=self.right_matrix[:3*self.Nx*self.Ny,:]@self.all_fields
         for i in range(len(self.source_index)):
             if self.Wc[i]==None:
-                b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
             else:
                 b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
         b2=self.right_matrix[3*self.Nx*self.Ny:,:]@self.all_fields
@@ -344,18 +351,22 @@ class FCI:
         self.recorded_Ez.append(Ez[self.xr,self.yr])
     
     def update_drude(self):
-        b1=self.right_matrix[:5*self.Nx*self.Ny,:]@self.all_fields
+        b1=self.right_matrix[:4*self.Nx*self.Ny,:]@self.all_fields
         for i in range(len(self.source_index)):
             if self.Wc[i]==None:
                 b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
             else:
                 b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
-        b2=self.right_matrix[5*self.Nx*self.Ny:,:]@self.all_fields
+        b2=self.right_matrix[4*self.Nx*self.Ny:,:]@self.all_fields
         M22_inv_b2=self.M22_LU.solve(b2)
-        self.all_fields[:5*self.Nx*self.Ny]=self.S_LU.solve(b1-self.M12@M22_inv_b2)
-        self.all_fields[5*self.Nx*self.Ny:]=self.M22_LU.solve(b2-self.M21@self.all_fields[:5*self.Nx*self.Ny])
+        p=b1-self.M12@M22_inv_b2
+        p1=p[:self.Nx*self.Ny]
+        p2=p[self.Nx*self.Ny:]
+        self.all_fields[self.Nx*self.Ny:4*self.Nx*self.Ny]=self.Ss_LU.solve(p2-self.S21@self.A00_inv@p1)
+        self.all_fields[:self.Nx*self.Ny]=self.A00_inv@(p1-self.S12@self.all_fields[self.Nx*self.Ny:4*self.Nx*self.Ny])
+        self.all_fields[4*self.Nx*self.Ny:]=self.M22_LU.solve(b2-self.M21@self.all_fields[:4*self.Nx*self.Ny])
         self.n+=1
-        Ez=np.reshape(self.all_fields[:self.Nx*self.Ny],(self.Nx,self.Ny))
+        Ez=np.reshape(self.all_fields[7*self.Nx*self.Ny:],(self.Nx,self.Ny))
         self.recorded_Ez.append(Ez[self.xr,self.yr])
 
     def update_loop(self,nt=None):
@@ -401,9 +412,10 @@ class FCI:
         def update(frame):
             if self.drude:
                 self.update_loop_drude(speed)
+                Ez = np.reshape(self.all_fields[7*self.Nx*self.Ny:], (self.Nx, self.Ny))
             else:
                 self.update_loop(speed)
-            Ez = np.reshape(self.all_fields[:self.Nx*self.Ny], (self.Nx, self.Ny))
+                Ez = np.reshape(self.all_fields[:self.Nx*self.Ny], (self.Nx, self.Ny))
             im.set_array(Ez.T.ravel())
             ax.set_title('Ez at t = {:.2f} µs'.format(self.n*self.dt*1e6))
             return [im, source_marker, rec1]
