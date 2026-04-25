@@ -28,9 +28,9 @@ class FCI:
         self.tc = []
         self.width = []
         self.Wc = []
-        self.eps=np.ones(self.Nx*self.Ny)
-        self.mu=np.ones(self.Nx*self.Ny)
-        self.c = 1
+        self.eps=np.ones(self.Nx*self.Ny)*epsilon_0
+        self.mu=np.ones(self.Nx*self.Ny)*mu_0
+        self.c = c
         self.sigma=np.zeros(self.Nx*self.Ny)
         self.gamma=np.zeros(self.Nx*self.Ny)
         self.n=0
@@ -337,7 +337,7 @@ class FCI:
         b1=self.right_matrix[:3*self.Nx*self.Ny,:]@self.all_fields
         for i in range(len(self.source_index)):
             if self.Wc[i]==None:
-                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+                b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
             else:
                 b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
         b2=self.right_matrix[3*self.Nx*self.Ny:,:]@self.all_fields

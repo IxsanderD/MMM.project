@@ -5,23 +5,21 @@ from Class_FCI import FCI
 import time
 
 # start=time.perf_counter()
-L = 100
-Nx=301
-Ny=301
-Nt=300
+L = 1
+Nx=201
+Ny=201
+Nt=160
 dx=np.ones(Nx)*L/Nx
 dy=np.ones(Ny)*L/Ny
-c0=1
+c0=c
 J0 = 1 # A/m^2
-width = np.sum(dx)/(10*c0)
+width = np.sum(dx)/(50*c0)
 tc = 5*width
-tf= 5*tc
+tf= 8*tc
 dt= tf/Nt
-Wc = 5/width
-Wc = 2*np.pi*c0/(7*dx[0])
-width = 5/Wc
-tc = 5*width
-dt = 5*tc/Nt
+# Wc = 2*np.pi*c0/(8*dx[0])
+# width = 5/Wc
+dt = tf/Nt
 
 k_max=1
 sigma_max=1 #(m+1)/(150*np.pi*dx[0])
@@ -29,17 +27,13 @@ sigma_max=1 #(m+1)/(150*np.pi*dx[0])
 xs = Nx//2
 ys = Ny//2
 
-
-start=time.perf_counter()
-solver=FCI(Nt,dx,dy,dt,k_max,sigma_max,drude=True)
+solver=FCI(Nt,dx,dy,dt,k_max,sigma_max,drude=False)
 # solver.add_material(3*Nx//5,4*Nx//5,3*Ny//5,4*Ny//5,1,1,1000)
 solver.construct_matrices()
-solver.add_source(xs,ys,J0,tc,width,Wc)
+solver.add_source(xs,ys,J0,tc,width)
 solver.add_recorder(xs+Nx//4,ys)
 # solver.update_loop()
 # solver.show_recorder()
-stop=time.perf_counter()
-print(stop-start)
 solver.animate()
 
 ###
