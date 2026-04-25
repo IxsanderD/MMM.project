@@ -4,9 +4,10 @@ from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.patches import Rectangle
 from scipy.special import hankel2
+from scipy.constants import epsilon_0, mu_0
 
 class Yee:
-    def __init__(self,L,Nx,Ny,Nt,dt,N_PML,PML=False,m=4,sigma_max=166.558,kappa_max=3.221):
+    def __init__(self,L,Nx,Ny,Nt,dt,N_PML,PML=False,m=4,sigma_max=0.83279,kappa_max=3.221):
         self.L = L
         self.Nx = Nx
         self.Ny = Ny
@@ -23,8 +24,8 @@ class Yee:
         self.Hy = np.zeros((Nx,Ny+1))
         self.Jc = np.zeros((Nx+1,Ny+1))
         # Parameters:
-        self.eps = np.ones((Nx+1,Ny+1))
-        self.mu = np.ones((Nx+1,Ny+1))
+        self.eps = np.ones((Nx+1,Ny+1))*epsilon_0
+        self.mu = np.ones((Nx+1,Ny+1))*mu_0
         self.c = 1/np.sqrt(np.min(self.eps)*np.min(self.mu))
         self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
         self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
@@ -91,7 +92,7 @@ class Yee:
         self.Xy = 2*self.gamma/self.dt/(2*self.gamma/self.dt + 1)*self.Dzy_ade
         self.Xx = 2*self.gamma/self.dt/(2*self.gamma/self.dt + 1)*self.Dzx_ade
         
-    def add_source(self,xs,ys,J0,tc,width,Wc):
+    def add_source(self,xs,ys,J0,tc,width,Wc=None):
         self.xs = xs
         self.ys = self.Ny-ys
         self.J0 = J0
@@ -100,7 +101,10 @@ class Yee:
         self.Wc = Wc
         self.source_Ez = []
         time = np.arange(self.Nt)*self.dt
-        self.applied_source = self.J0*np.sin(self.Wc*time)*np.exp(-(time-self.tc)**2/2/self.width**2)/2
+        if self.Wc==None:
+            self.applied_source = self.J0*np.exp(-(time-self.tc)**2/2/self.width**2)/2
+        else:
+            self.applied_source = self.J0*np.sin(self.Wc*time)*np.exp(-(time-self.tc)**2/2/self.width**2)/2
         
     def add_recorder(self,xr,yr):
         self.xr = xr
@@ -169,7 +173,10 @@ class Yee:
             - self.B[1:-1,1:-1]/self.dy_dual[np.newaxis,:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
         )
         # Source:
-        self.Ez[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
+        if self.Wc==None:
+            self.Ez[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
+        else:
+            self.Ez[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
         #Update Hy:
         self.Hy[:,1:-1] = self.Hy[:,1:-1] + self.dt/(self.muy[:,1:-1]*self.dx[:,np.newaxis])*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
         #Update Hx:
@@ -190,8 +197,12 @@ class Yee:
             + self.Dzx[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
         )
         # Source:
-        self.Ezx[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
-        self.Ezy[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        if self.Wc==None:
+            self.Ezx[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+            self.Ezy[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        else:
+            self.Ezx[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+            self.Ezy[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
         self.Ez = self.Ezx + self.Ezy
         #Update Hy:
         self.Hy[:,1:-1] = self.Cy[:,1:-1]*self.Hy[:,1:-1] + self.Dy[:,1:-1]/self.dx[:,np.newaxis]*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
@@ -214,8 +225,12 @@ class Yee:
             + self.Dzx_ade[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
         )
         # Source:
-        self.Ezx[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
-        self.Ezy[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        if self.Wc==None:
+            self.Ezx[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+            self.Ezy[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+        else:
+            self.Ezx[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+            self.Ezy[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
         # Induced current
         self.Ezx += self.Xx*self.Jc/2
         self.Ezy += self.Xy*self.Jc/2
@@ -240,7 +255,10 @@ class Yee:
             - self.B_ade[1:-1,1:-1]/self.dy_dual[np.newaxis,:]*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
         )
         # Source:
-        self.Ez[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
+        if self.Wc==None:
+            self.Ez[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
+        else:
+            self.Ez[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)
         # Induced current
         self.Ez += self.X*self.Jc
         #Update Hy:
