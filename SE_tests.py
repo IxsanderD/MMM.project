@@ -26,7 +26,7 @@ N_PML = 40
 n = 1.5
 eps = n**2
 
-print(Wc/2/np.pi/10**12)
+print(Wc/2/np.pi/10**9)
 
 xs = Nx//4
 ys = Ny//2
@@ -41,7 +41,7 @@ colors = ['blue', 'orange', 'green', 'red']
 for d in [30,40,50,60]:
     
     delta = c/(2*n*d*L/Nx)
-    print(delta/10**12)
+    print(delta/10**9)
 
     solver = Yee(L,Nx,Ny,Nt,dt,N_PML,PML=True,sigma_max=sigma_max,kappa_max=kappa_max)
     solver.add_source(xs,ys,J0,tc,width,Wc)
@@ -67,7 +67,7 @@ for d in [30,40,50,60]:
     f=np.fft.rfftfreq(len(padded_Ez_shielded),dt)
     mask = np.where((2*np.pi*f<Wc+4/width) & (2*np.pi*f>Wc-4/width))
     SE=20*np.log10(np.abs(Ez_unshielded/Ez_shielded))
-    axes[i].plot(f[mask]/10**12,SE[mask],color=colors[i],label=f'd={d/Nx*L*1e3:.0f} mm')
+    axes[i].plot(f[mask]/10**9,SE[mask],color=colors[i],label=f'd={d/Nx*L*1e3:.0f} mm')
     axes[i].legend()
     axes[i].set_ylabel(r'SE [dB]')
     i+=1
@@ -89,7 +89,7 @@ dt= tf/Nt
 dx = np.ones(Nx)*Lx/Nx
 dy = np.ones(Ny)*Lx/Ny
 
-print(Wc/2/np.pi/10**12)
+print(Wc/2/np.pi/10**9)
 
 xs = Nx//4
 ys = Ny//2
@@ -103,7 +103,7 @@ colors = ['blue', 'orange', 'green', 'red']
 for d in [30,40,50,60]:
     
     delta = c/(2*n*d*Lx/Nx)
-    print(delta/10**12)
+    print(delta/10**9)
 
     solver = FCI(Nt,dx,dy,dt,1,1000)
     solver.add_source(xs,ys,J0,tc,width,Wc)
@@ -133,7 +133,7 @@ for d in [30,40,50,60]:
     f=np.fft.rfftfreq(len(padded_Ez_shielded),dt)
     mask = np.where((2*np.pi*f<Wc+4/width) & (2*np.pi*f>Wc-4/width))
     SE=20*np.log10(np.abs(Ez_unshielded/Ez_shielded))
-    axes[i].plot(f[mask]/10**12,SE[mask],color=colors[i],label=f'd={d} mm')
+    axes[i].plot(f[mask]/10**9,SE[mask],color=colors[i],label=f'd={d} mm')
     axes[i].legend()
     axes[i].set_ylabel(r'SE [dB]')
     i+=1
