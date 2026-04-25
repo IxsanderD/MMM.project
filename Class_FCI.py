@@ -57,7 +57,7 @@ class FCI:
 
     def add_recorder(self,xr,yr):
         self.xr = xr
-        self.yr = self.Ny - yr
+        self.yr = self.Ny - yr - 1
         self.recorded_Ez = []
 
     def add_material(self,x_s,x_e,y_s,y_e,eps_r,mu_r,sigma,gamma=0):
@@ -337,9 +337,9 @@ class FCI:
         b1=self.right_matrix[:3*self.Nx*self.Ny,:]@self.all_fields
         for i in range(len(self.source_index)):
             if self.Wc[i]==None:
-                b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+                b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]-=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
             else:
-                b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+                b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]-=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
         b2=self.right_matrix[3*self.Nx*self.Ny:,:]@self.all_fields
         self.all_fields[:3*self.Nx*self.Ny]=self.S_LU.solve(b1-self.M12@self.M22_inv@b2)
         self.all_fields[3*self.Nx*self.Ny:]=self.M22_inv@(b2-self.M21@self.all_fields[:3*self.Nx*self.Ny])
@@ -351,9 +351,9 @@ class FCI:
         b1=self.right_matrix[:4*self.Nx*self.Ny,:]@self.all_fields
         for i in range(len(self.source_index)):
             if self.Wc[i]==None:
-                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]-=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
             else:
-                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]-=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
         b2=self.right_matrix[4*self.Nx*self.Ny:,:]@self.all_fields
         p=b1-self.M12@self.M22_inv@b2
         p1=p[:self.Nx*self.Ny]
@@ -447,11 +447,11 @@ class FCI:
         source_freq = np.fft.rfft(self.applied_source)*self.dt
         omega = 2*np.pi*np.fft.rfftfreq(len(self.recorded_Ez), self.dt)
 
-        delta_x = np.sum(self.dx[:self.xs]) - np.sum(self.dx[:self.xr])
-        delta_y = np.sum(self.dy[:self.ys]) - np.sum(self.dy[:self.yr])
+        delta_x = np.sum(self.dx[:self.source_index[0][0]]) - np.sum(self.dx[:self.xr])
+        delta_y = np.sum(self.dy[:self.source_index[0][1]]) - np.sum(self.dy[:self.yr])
         print(delta_x, delta_y)
 
-        E_freq_ana = -self.J0*omega/4*hankel2(0, omega/self.c*np.sqrt(delta_x**2+delta_y**2))
+        E_freq_ana = -self.J0[0]*omega*mu_0/4*hankel2(0, omega/self.c*np.sqrt(delta_x**2+delta_y**2))
         E_freq_ana[0] = 0
 
         E_max = np.max(np.abs(source_freq))
@@ -468,9 +468,7 @@ class FCI:
             plt.title('Frequency domain response')
             plt.show()
 
-        E_freq_sim *= np.mean(np.abs(E_freq_ana[mask]/self.J0/E_freq_sim[mask]*source_freq[mask]))
-
-        plt.plot(omega[mask], np.abs(E_freq_sim/source_freq)[mask], label='Numerical response (rescaled)')
+        plt.plot(omega[mask], np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/np.sum(self.dx)/np.sum(self.dy)), label='Numerical response')
         plt.plot(omega[mask], np.abs(E_freq_ana/self.J0)[mask], label='Analytical response')
         plt.xlabel('Frequency (rad/s)')
         plt.ylabel('$|E_z/J|$')

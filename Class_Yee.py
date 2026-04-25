@@ -102,9 +102,9 @@ class Yee:
         self.source_Ez = []
         time = np.arange(self.Nt)*self.dt
         if self.Wc==None:
-            self.applied_source = self.J0*np.exp(-(time-self.tc)**2/2/self.width**2)/2
+            self.applied_source = self.J0*np.exp(-(time-self.tc)**2/2/self.width**2)
         else:
-            self.applied_source = self.J0*np.sin(self.Wc*time)*np.exp(-(time-self.tc)**2/2/self.width**2)/2
+            self.applied_source = self.J0*np.sin(self.Wc*time)*np.exp(-(time-self.tc)**2/2/self.width**2)
         
     def add_recorder(self,xr,yr):
         self.xr = xr
@@ -346,7 +346,9 @@ class Yee:
             plt.show()
 
         E_freq_sim = np.fft.rfft(self.recorded_Ez)*self.dt
+        print(np.size(E_freq_sim))
         source_freq = np.fft.rfft(self.applied_source)*self.dt
+        print(np.size(source_freq))
         omega = 2*np.pi*np.fft.rfftfreq(len(self.recorded_Ez), self.dt)
 
         # Source and recorder distance
@@ -355,7 +357,7 @@ class Yee:
         print(delta_x, delta_y)
 
         # Analytical solution
-        E_freq_ana = -self.J0*omega/4*hankel2(0, omega/self.c*np.sqrt(delta_x**2+delta_y**2))
+        E_freq_ana = -self.J0*omega*mu_0/4*hankel2(0, omega/self.c*np.sqrt(delta_x**2+delta_y**2))
         E_freq_ana[0] = 0
 
         # Restrict to bandwidth of the source
@@ -373,12 +375,9 @@ class Yee:
             plt.legend()
             plt.title('Frequency domain response')
             plt.show()
-        
-        # Rescale
-        E_freq_sim *= np.mean(np.abs(E_freq_ana[mask]/self.J0/E_freq_sim[mask]*source_freq[mask]))
 
         # Compare with analytical solution
-        plt.plot(omega[mask], np.abs(E_freq_sim/source_freq)[mask], label='Numerical response (rescaled)')
+        plt.plot(omega[mask], np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/self.L**2), label='Numerical response')
         plt.plot(omega[mask], np.abs(E_freq_ana/self.J0)[mask], label='Analytical response')
         plt.xlabel('Frequency (rad/s)')
         plt.ylabel('|$E_z/J$|')

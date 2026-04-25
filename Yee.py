@@ -43,7 +43,7 @@ print(f'f = {Wc/2/np.pi:.2f}')
 # With PML
 ###
 solver = Yee(L,Nx,Ny,Nt,dt,N_PML,PML=True)
-solver.add_source(xs,ys,J0,tc,width)
+solver.add_source(xs,ys,J0,tc,width,Wc)
 solver.add_recorder(xr,yr)
 
 # solver.show_PML() # PML profiles

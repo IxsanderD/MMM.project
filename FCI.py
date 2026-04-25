@@ -8,14 +8,14 @@ import time
 L = 1
 Nx=201
 Ny=201
-Nt=160
+Nt=200
 dx=np.ones(Nx)*L/Nx
 dy=np.ones(Ny)*L/Ny
 c0=c
-J0 = 1 # A/m^2
+J0 = 10 # A/m^2
 width = np.sum(dx)/(50*c0)
 tc = 5*width
-tf= 8*tc
+tf= 15*tc
 dt= tf/Nt
 # Wc = 2*np.pi*c0/(8*dx[0])
 # width = 5/Wc
@@ -28,13 +28,13 @@ xs = Nx//2
 ys = Ny//2
 
 solver=FCI(Nt,dx,dy,dt,k_max,sigma_max,drude=False)
-# solver.add_material(3*Nx//5,4*Nx//5,3*Ny//5,4*Ny//5,1,1,1000)
+solver.add_material(3*Nx//5,4*Nx//5,0,Ny-1,3,1,0)
 solver.construct_matrices()
 solver.add_source(xs,ys,J0,tc,width)
 solver.add_recorder(xs+Nx//4,ys)
 # solver.update_loop()
 # solver.show_recorder()
-solver.animate()
+solver.animate(speed=3)
 
 ###
 # Analytical verification
