@@ -116,8 +116,8 @@ class Yee:
         self.x_end = x_end
         self.y_start = y_start
         self.y_end = y_end
-        self.eps[x_start:x_end,y_start:y_end] = eps_r
-        self.mu[x_start:x_end,y_start:y_end] = mu_r
+        self.eps[x_start:x_end,y_start:y_end] *= eps_r
+        self.mu[x_start:x_end,y_start:y_end] *= mu_r
         self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
         self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
         self.sigma[x_start:x_end,y_start:y_end] = sigma
@@ -128,7 +128,7 @@ class Yee:
         self.x_end = x_end
         self.y_start = y_start
         self.y_end = y_end
-        self.eps[x_start:x_end,y_start:y_end] = eps_r
+        self.eps[x_start:x_end,y_start:y_end] *= eps_r
         self.sigma_DC[x_start:x_end,y_start:y_end] = sigma_DC
         self.gamma[x_start:x_end,y_start:y_end] = gamma
         self.drude = True
