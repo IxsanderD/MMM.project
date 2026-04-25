@@ -10,7 +10,7 @@ Ny = 200
 c = c
 CFL = 0.9
 dt = CFL/c/np.sqrt(1/(L/Nx)**2+1/(L/Ny)**2)
-J0 = 10000
+J0 = 10
 Wc = 0.5/dt
 width = 9*dt
 tc = 5*width
@@ -32,7 +32,7 @@ print(f'f = {Wc/2/np.pi:.2f}')
 # solver.add_source(xs,ys,J0,tc,width,Wc)
 # solver.add_recorder(xr,yr)
 
-# solver.animate(speed = 1)
+# solver.animate(speed = 10)
 # solver.restart()
 
 # solver.update_loop()
@@ -43,7 +43,7 @@ print(f'f = {Wc/2/np.pi:.2f}')
 # With PML
 ###
 solver = Yee(L,Nx,Ny,Nt,dt,N_PML,PML=True)
-solver.add_source(xs,ys,J0,tc,width)
+solver.add_source(xs,ys,J0,tc,width,Wc)
 solver.add_recorder(xr,yr)
 
 # solver.show_PML() # PML profiles
