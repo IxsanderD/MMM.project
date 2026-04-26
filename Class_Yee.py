@@ -346,15 +346,12 @@ class Yee:
             plt.show()
 
         E_freq_sim = np.fft.rfft(self.recorded_Ez)*self.dt
-        print(np.size(E_freq_sim))
         source_freq = np.fft.rfft(self.applied_source)*self.dt
-        print(np.size(source_freq))
         omega = 2*np.pi*np.fft.rfftfreq(len(self.recorded_Ez), self.dt)
 
         # Source and recorder distance
         delta_x = np.sum(self.dx[:self.xs]) - np.sum(self.dx[:self.xr])
         delta_y = np.sum(self.dy[:self.ys]) - np.sum(self.dy[:self.yr])
-        print(delta_x, delta_y)
 
         # Analytical solution
         E_freq_ana = -self.J0*omega*mu_0/4*hankel2(0, omega/self.c*np.sqrt(delta_x**2+delta_y**2))
@@ -377,7 +374,7 @@ class Yee:
             plt.show()
 
         # Compare with analytical solution
-        plt.plot(omega[mask], np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/self.L**2), label='Numerical response')
+        plt.plot(omega[mask], np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/self.L**2),'x', label='Numerical response')
         plt.plot(omega[mask], np.abs(E_freq_ana/self.J0)[mask], label='Analytical response')
         plt.xlabel('Frequency (rad/s)')
         plt.ylabel('|$E_z/J$|')

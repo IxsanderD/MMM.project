@@ -449,7 +449,6 @@ class FCI:
 
         delta_x = np.sum(self.dx[:self.source_index[0][0]]) - np.sum(self.dx[:self.xr])
         delta_y = np.sum(self.dy[:self.source_index[0][1]]) - np.sum(self.dy[:self.yr])
-        print(delta_x, delta_y)
 
         E_freq_ana = -self.J0[0]*omega*mu_0/4*hankel2(0, omega/self.c*np.sqrt(delta_x**2+delta_y**2))
         E_freq_ana[0] = 0
@@ -468,7 +467,7 @@ class FCI:
             plt.title('Frequency domain response')
             plt.show()
 
-        plt.plot(omega[mask], np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/np.sum(self.dx)/np.sum(self.dy)), label='Numerical response')
+        plt.plot(omega[mask], np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/np.sum(self.dx)/np.sum(self.dy)),'x', label='Numerical response')
         plt.plot(omega[mask], np.abs(E_freq_ana/self.J0)[mask], label='Analytical response')
         plt.xlabel('Frequency (rad/s)')
         plt.ylabel('$|E_z/J|$')
