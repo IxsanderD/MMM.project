@@ -467,10 +467,13 @@ class FCI:
             plt.title('Frequency domain response')
             plt.show()
 
-        plt.plot(omega[mask], np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/np.sum(self.dx)/np.sum(self.dy)),'x', label='Numerical response')
-        plt.plot(omega[mask], np.abs(E_freq_ana/self.J0)[mask], label='Analytical response')
-        plt.xlabel('Frequency (rad/s)')
-        plt.ylabel('$|E_z/J|$')
-        plt.legend()
-        plt.title('Frequency response comparison')
-        plt.show()
+        if p_all:
+            plt.plot(omega[mask], np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/np.sum(self.dx)/np.sum(self.dy)),'x', label='Numerical response')
+            plt.plot(omega[mask], np.abs(E_freq_ana/self.J0)[mask], label='Analytical response')
+            plt.xlabel('Frequency (rad/s)')
+            plt.ylabel('$|E_z/J|$')
+            plt.legend()
+            plt.title('Frequency response comparison')
+            plt.show()
+
+        return omega[mask],np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/np.sum(self.dx)/np.sum(self.dy)),omega[mask], np.abs(E_freq_ana/self.J0)[mask]

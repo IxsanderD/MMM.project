@@ -373,11 +373,14 @@ class Yee:
             plt.title('Frequency domain response')
             plt.show()
 
-        # Compare with analytical solution
-        plt.plot(omega[mask], np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/self.L**2),'x', label='Numerical response')
-        plt.plot(omega[mask], np.abs(E_freq_ana/self.J0)[mask], label='Analytical response')
-        plt.xlabel('Frequency (rad/s)')
-        plt.ylabel('|$E_z/J$|')
-        plt.legend()
-        plt.title('Frequency response comparison')
-        plt.show()
+        if plot_all:
+            # Compare with analytical solution
+            plt.plot(omega[mask], np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/self.L**2),'x', label='Numerical response')
+            plt.plot(omega[mask], np.abs(E_freq_ana/self.J0)[mask], label='Analytical response')
+            plt.xlabel('Frequency (rad/s)')
+            plt.ylabel('|$E_z/J$|')
+            plt.legend()
+            plt.title('Frequency response comparison')
+            plt.show()
+        
+        return omega[mask],np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/np.sum(self.dx)/np.sum(self.dy)),omega[mask], np.abs(E_freq_ana/self.J0)[mask]
