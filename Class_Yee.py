@@ -244,7 +244,7 @@ class Yee:
         #Time step:
         self.n += 1
         self.recorded_Ez.append(self.Ez[self.xr,self.yr])
-        self.source_Ez.append(self.Ez[self.xs,self.ys])        
+        self.source_Ez.append(self.Ez[self.xs,self.ys])
     
     def update_drude(self):
         # Update Ez:
