@@ -19,8 +19,6 @@ tc = 5*width
 Nt = int(5*tc/dt)
 N_PML=30
 
-print(dt)
-
 # xs=Nx//4
 # ys=Ny//2
 # xr=xs+2
