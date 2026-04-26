@@ -12,7 +12,7 @@ CFL = 0.9
 dt = CFL/c/np.sqrt(1/(L/Nx)**2+1/(L/Ny)**2)
 J0 = 10
 Wc = 0.5/dt
-width = 9*dt
+width = 3/Wc
 tc = 5*width
 Nt = int(20*tc/dt)
 
