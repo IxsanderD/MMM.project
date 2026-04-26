@@ -17,8 +17,8 @@ width = np.sum(dx)/(50*c0)
 tc = 5*width
 tf= 15*tc
 dt= tf/Nt
-# Wc = 2*np.pi*c0/(8*dx[0])
-# width = 5/Wc
+Wc = 2*np.pi*c0/(8*dx[0])
+width = 5/Wc
 dt = tf/Nt
 
 k_max=1
@@ -28,9 +28,9 @@ xs = Nx//2
 ys = Ny//2
 
 solver=FCI(Nt,dx,dy,dt,k_max,sigma_max,drude=False)
-solver.add_material(3*Nx//5,4*Nx//5,0,Ny-1,3,1,0)
+# solver.add_material(3*Nx//5,4*Nx//5,0,Ny-1,3,1,0)
 solver.construct_matrices()
-solver.add_source(xs,ys,J0,tc,width)
+solver.add_source(xs,ys,J0,tc,width,Wc)
 solver.add_recorder(xs+Nx//4,ys)
 # solver.update_loop()
 # solver.show_recorder()
