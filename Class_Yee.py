@@ -112,15 +112,27 @@ class Yee:
         self.recorded_Ez = []
         
     def add_material(self,x_start,x_end,y_start,y_end,eps_r,mu_r,sigma):
-        self.x_start = x_start
-        self.x_end = x_end
-        self.y_start = y_start
-        self.y_end = y_end
-        self.eps[x_start:x_end,y_start:y_end] *= eps_r
-        self.mu[x_start:x_end,y_start:y_end] *= mu_r
-        self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
-        self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
-        self.sigma[x_start:x_end,y_start:y_end] = sigma
+        if type(x_start) is list:
+            for i in range(len(x_start)):
+                self.x_start = x_start[i]
+                self.x_end = x_end[i]
+                self.y_start = y_start[i]
+                self.y_end = y_end[i]
+                self.eps[x_start[i]:x_end[i],y_start[i]:y_end[i]] *= eps_r[i]
+                self.mu[x_start[i]:x_end[i],y_start[i]:y_end[i]] *= mu_r[i]
+                self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
+                self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
+                self.sigma[x_start[i]:x_end[i],y_start[i]:y_end[i]] = sigma[i]
+        else:
+            self.x_start = x_start
+            self.x_end = x_end
+            self.y_start = y_start
+            self.y_end = y_end
+            self.eps[x_start:x_end,y_start:y_end] *= eps_r
+            self.mu[x_start:x_end,y_start:y_end] *= mu_r
+            self.muy = (self.mu[1:,:]+self.mu[:-1,:])/2
+            self.mux = (self.mu[:,1:]+self.mu[:,:-1])/2
+            self.sigma[x_start:x_end,y_start:y_end] = sigma
         self.make_matrices()
 
     def add_drude_material(self,x_start,x_end,y_start,y_end,eps_r,sigma_DC,gamma):
