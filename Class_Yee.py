@@ -100,7 +100,7 @@ class Yee:
         self.width = width
         self.Wc = Wc
         self.source_Ez = []
-        time = np.arange(self.Nt)*self.dt
+        time = np.arange(0,self.Nt)*self.dt
         if self.Wc==None:
             self.applied_source = self.J0*np.exp(-(time-self.tc)**2/2/self.width**2)
         else:
@@ -310,6 +310,7 @@ class Yee:
             return [im,source_marker,rec1]
         
         ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt * 1000), repeat=repeat)
+        # ani.save("simulation.gif", writer="pillow", fps=10)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="3%", pad=0.05)
         cb = fig.colorbar(im, cax=cax, label='Ez [V/m]')
