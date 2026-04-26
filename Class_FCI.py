@@ -476,4 +476,4 @@ class FCI:
             plt.title('Frequency response comparison')
             plt.show()
 
-        return omega[mask],np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/np.sum(self.dx)/np.sum(self.dy)),omega[mask], np.abs(E_freq_ana/self.J0)[mask]
+        return omega[mask],np.abs(E_freq_sim[mask]/source_freq[mask]*self.Nx*self.Ny/np.sum(self.dx)/np.sum(self.dy)),np.abs(E_freq_ana/self.J0)[mask]
