@@ -16,11 +16,6 @@ width = 5/Wc
 tc = 5*width
 Nt = int(20*tc/dt)
 
-xs = Nx//4
-ys = 3*Ny//4
-xr = Nx//4
-yr = Ny//4
-
 N_PML = 40  
 
 n = 1.5
