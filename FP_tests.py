@@ -5,6 +5,8 @@ from Class_FCI import FCI
 from Class_Yee import Yee
 import time
 
+# Disclaimer: running this file could take some time, especially the FCI part.
+
 # In this file, we will build a Fabry-Perot interferrometer and analyze the relative power reflection coefficient. We first start
 # with a simple Fabry-Perot made out of glass. We will first look if the Fabry-Perot filter works by varying the thickness of this filter.
 # If the frequency shifts match the analytical frequency shifts, we can confidently say that the filter works. We first do this for Yee.
@@ -26,16 +28,16 @@ kappa_max=3.221
 
 # We define our material. We take the refractive index of glass as n=1.33
 
-# n = 1.33
-# eps = n**2
+n = 1.33
+eps = n**2
 
 # We put our recorder on the source, we will extract the initial created field by the source later to accuratly describe the reflection
 # coefficient.
 
-# xs = Nx//4
-# ys = Ny//2
-# xr = Nx//4
-# yr = Ny//2
+xs = Nx//4
+ys = Ny//2
+xr = Nx//4
+yr = Ny//2
 
 # fig,axes = plt.subplots(4,1,figsize=(6,10))
 # i = 0
