@@ -18,10 +18,10 @@ dt = CFL/c/np.sqrt(1/(L/Nx)**2+1/(L/Ny)**2)
 
 ### Source parameters
 J0 = 50
-Wc = 0.15/dt
-width = 3/Wc
+Wc = 0.35/dt
+width = 5/Wc
 tc = 5*width
-tf = 5*tc
+tf = 20*tc
 Nt = int(tf/dt)
 print('Central angular frequency: ', Wc*1e-9, ' GHz')
 
@@ -56,8 +56,9 @@ gamma = 0
 # solver_Yee.update_loop()
 
 # ### Visualise
-# # solver_Yee.show_recorder()
-# # solver_Yee.animate()
+# solver_Yee.show_recorder()
+# solver_Yee.restart()
+# solver_Yee.animate()
 
 # ### Extract results
 # Ez_Yee_normal = solver_Yee.recorded_Ez
@@ -76,8 +77,9 @@ gamma = 0
 # solver_Yee.update_loop()
 
 # ### Visualise
-# # solver_Yee.show_recorder()
-# # solver_Yee.animate()
+# solver_Yee.show_recorder()
+# solver_Yee.restart()
+# solver_Yee.animate()
 
 # ### Extract results
 # Ez_Yee_drude = solver_Yee.recorded_Ez
@@ -103,31 +105,32 @@ dy=np.ones(Ny)*L/Ny
 
 ### PML parameters
 k_max=1
-sigma_max=10
+sigma_max=1
 
 ### First we investigate again the normal material
 gamma = 0
 
 ### Run FCI
-solver_FCI=FCI(Nt,dx,dy,dt,k_max,sigma_max,drude=True)
-solver_FCI.construct_matrices()
-solver_FCI.add_source(xs,ys,J0,tc,width,Wc)
-solver_FCI.add_recorder(xr,yr)
-# solver_FCI.add_material(x_start,x_einde,y_start,y_einde,eps_r,1,sigma_DC,gamma)
-solver_FCI.update_loop_drude()
+# solver_FCI=FCI(Nt,dx,dy,dt,k_max,sigma_max,drude=True)
+# solver_FCI.construct_matrices()
+# solver_FCI.add_source(xs,ys,J0,tc,width,Wc)
+# solver_FCI.add_recorder(xr,yr)
+# # solver_FCI.add_material(x_start,x_einde,y_start,y_einde,eps_r,1,sigma_DC,gamma)
+# solver_FCI.update_loop_drude()
 
-### Visualise
-solver_FCI.show_recorder()
-solver_FCI.animate()
+# ### Visualise
+# solver_FCI.show_recorder()
+# solver_FCI.restart()
+# solver_FCI.animate()
 
-### Extract results
-Ez_FCI_normal = solver_FCI.recorded_Ez
-time_FCI_normal = np.arange(solver_FCI.Nt)*solver_FCI.dt
-Ez_freq_FCI_normal = np.fft.rfft(Ez_FCI_normal)
-freq_FCI_normal = np.fft.rfftfreq(solver_FCI.Nt,solver_FCI.dt)
+# ### Extract results
+# Ez_FCI_normal = solver_FCI.recorded_Ez
+# time_FCI_normal = np.arange(solver_FCI.Nt)*solver_FCI.dt
+# Ez_freq_FCI_normal = np.fft.rfft(Ez_FCI_normal)
+# freq_FCI_normal = np.fft.rfftfreq(solver_FCI.Nt,solver_FCI.dt)
 
-### Now we again change gamma so it becomes a drude material
-gamma = 4.5
+# ### Now we again change gamma so it becomes a drude material
+# gamma = 4.5
 
 ### Run FCI
 # solver_FCI=FCI(Nt,dx,dy,dt,k_max,sigma_max,drude=True)
@@ -139,6 +142,7 @@ gamma = 4.5
 
 # ### Visualise
 # solver_FCI.show_recorder()
+# solver_FCI.restart()
 # solver_FCI.animate()
 
 # ### Extract results
