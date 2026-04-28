@@ -6,20 +6,15 @@ import time
 
 # start=time.perf_counter()
 L = 1
-Nx=201
-Ny=201
-Nt=200
-dx=np.ones(Nx)*L/Nx
-dy=np.ones(Ny)*L/Ny
-c0=c
-J0 = 10 # A/m^2
-width = np.sum(dx)/(50*c0)
-tc = 5*width
-tf= 15*tc
-dt= tf/Nt
-Wc = 2*np.pi*c0/(8*dx[0])
+Nx = 201
+Ny = 201
+CFL = 0.9
+dt = CFL/c/np.sqrt(1/(L/Nx)**2+1/(L/Ny)**2)
+J0 = 100
+Wc = 0.25/dt
 width = 5/Wc
-dt = tf/Nt
+tc = 5*width
+Nt = int(20*tc/dt)
 
 k_max=1
 sigma_max=1 #(m+1)/(150*np.pi*dx[0])
@@ -27,7 +22,10 @@ sigma_max=1 #(m+1)/(150*np.pi*dx[0])
 xs = Nx//2
 ys = Ny//2
 
-solver=FCI(Nt,dx,dy,dt,k_max,sigma_max,drude=False)
+dx=np.ones(Nx)*L/Nx
+dy=np.ones(Ny)*L/Ny
+
+solver=FCI(Nt,dx,dy,dt,k_max,sigma_max,drude=True)
 # solver.add_material(3*Nx//5,4*Nx//5,0,Ny-1,3,1,0)
 solver.construct_matrices()
 solver.add_source(xs,ys,J0,tc,width,Wc)

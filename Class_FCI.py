@@ -324,7 +324,7 @@ class FCI:
         self.M22_inv=bmat([[A44_inv,Z,Z,Z],[Z,A55_inv,Z,Z],[Z,Z,A66_inv,Z],[-A77_inv@A74@A44_inv,Z,Z,A77_inv]])
         self.S12=bmat([[A01,Z,Z]],format='csr')
         self.S21=bmat([[A10],[Z],[Z]],format='csr')
-        Ss=bmat([[A11-A10@self.A00_inv@A01,-A15@A55_inv@A52,-A16@A66_inv@A52],[A27@A77_inv@A74@A44_inv@A41,A22,Z],[A37@A77_inv@A74@A44_inv@A41,Z,A33]],format='csc')
+        Ss=bmat([[A11-A10@self.A00_inv@A01,-A15@A55_inv@A52,-A16@A66_inv@A63],[A27@A77_inv@A74@A44_inv@A41,A22,Z],[A37@A77_inv@A74@A44_inv@A41,Z,A33]],format='csc')
         self.S_LU=splu(Ss)
 
     def construct_matrices(self):

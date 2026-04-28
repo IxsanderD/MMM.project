@@ -34,10 +34,10 @@ eps = n**2
 # We put our recorder on the source, we will extract the initial created field by the source later to accuratly describe the reflection
 # coefficient.
 
-xs = Nx//4
-ys = Ny//2
-xr = Nx//4
-yr = Ny//2
+# xs = Nx//4
+# ys = Ny//2
+# xr = Nx//4
+# yr = Ny//2
 
 # fig,axes = plt.subplots(4,1,figsize=(6,10))
 # i = 0
