@@ -325,7 +325,7 @@ class FCI:
         self.S12=bmat([[A01,Z,Z]],format='csr')
         self.S21=bmat([[A10],[Z],[Z]],format='csr')
         Ss=bmat([[A11-A10@self.A00_inv@A01,-A15@A55_inv@A52,-A16@A66_inv@A52],[A27@A77_inv@A74@A44_inv@A41,A22,Z],[A37@A77_inv@A74@A44_inv@A41,Z,A33]],format='csc')
-        self.Ss_LU=splu(Ss)
+        self.S_LU=splu(Ss)
 
     def construct_matrices(self):
         if self.drude:
@@ -358,7 +358,7 @@ class FCI:
         p=b1-self.M12@self.M22_inv@b2
         p1=p[:self.Nx*self.Ny]
         p2=p[self.Nx*self.Ny:]
-        self.all_fields[self.Nx*self.Ny:4*self.Nx*self.Ny]=self.Ss_LU.solve(p2-self.S21@self.A00_inv@p1)
+        self.all_fields[self.Nx*self.Ny:4*self.Nx*self.Ny]=self.S_LU.solve(p2-self.S21@self.A00_inv@p1)
         self.all_fields[:self.Nx*self.Ny]=self.A00_inv@(p1-self.S12@self.all_fields[self.Nx*self.Ny:4*self.Nx*self.Ny])
         self.all_fields[4*self.Nx*self.Ny:]=self.M22_inv@(b2-self.M21@self.all_fields[:4*self.Nx*self.Ny])
         self.n+=1
