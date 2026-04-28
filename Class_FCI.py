@@ -337,9 +337,9 @@ class FCI:
         b1=self.right_matrix[:3*self.Nx*self.Ny,:]@self.all_fields
         for i in range(len(self.source_index)):
             if self.Wc[i]==None:
-                b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]-=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+                b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
             else:
-                b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]-=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+                b1[2*self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
         b2=self.right_matrix[3*self.Nx*self.Ny:,:]@self.all_fields
         self.all_fields[:3*self.Nx*self.Ny]=self.S_LU.solve(b1-self.M12@self.M22_inv@b2)
         self.all_fields[3*self.Nx*self.Ny:]=self.M22_inv@(b2-self.M21@self.all_fields[:3*self.Nx*self.Ny])
@@ -351,9 +351,9 @@ class FCI:
         b1=self.right_matrix[:4*self.Nx*self.Ny,:]@self.all_fields
         for i in range(len(self.source_index)):
             if self.Wc[i]==None:
-                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]-=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
             else:
-                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]-=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
+                b1[self.Nx*self.Ny+self.source_index[i][0]*self.Ny+self.source_index[i][1]]+=self.J0[i]*np.sin(self.Wc[i]*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc[i])**2/(2*self.width[i]**2))
         b2=self.right_matrix[4*self.Nx*self.Ny:,:]@self.all_fields
         p=b1-self.M12@self.M22_inv@b2
         p1=p[:self.Nx*self.Ny]
