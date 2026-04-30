@@ -39,7 +39,10 @@ class FCI:
         self.materials = []
 
     def restart(self):
-        self.all_fields=np.zeros(6*self.Nx*self.Ny)
+        if self.drude:
+            self.all_fields = np.zeros(8*self.Nx*self.Ny)
+        else:
+            self.all_fields=np.zeros(6*self.Nx*self.Ny)
         self.n=0
         self.recorded_Ez = []
 

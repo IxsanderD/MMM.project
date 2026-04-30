@@ -23,6 +23,7 @@ class Yee:
         self.Hx = np.zeros((Nx+1,Ny))
         self.Hy = np.zeros((Nx,Ny+1))
         self.Jc = np.zeros((Nx+1,Ny+1))
+        self.Jc_old = np.zeros((Nx+1,Ny+1))
         # Parameters:
         self.eps = np.ones((Nx+1,Ny+1))*epsilon_0
         self.mu = np.ones((Nx+1,Ny+1))*mu_0
@@ -86,11 +87,16 @@ class Yee:
         self.Dzy_ade = 1/(self.kappay*self.eps/self.dt + self.sigey/2 + self.sigma_DC/2/(2*self.gamma/self.dt + 1))
         self.Czx_ade = (self.kappax*self.eps/self.dt - self.sigex/2 - self.sigma_DC/2/(2*self.gamma/self.dt + 1)) / (self.kappax*self.eps/self.dt + self.sigex/2 + self.sigma_DC/2/(2*self.gamma/self.dt + 1))
         self.Dzx_ade = 1/(self.kappax*self.eps/self.dt + self.sigex/2 + self.sigma_DC/2/(2*self.gamma/self.dt + 1))
+        self.alph = (2*self.gamma/self.dt - 1 - self.sigma_DC/4/(self.kappax*self.eps/self.dt + self.sigex/2) - self.sigma_DC/4/(self.kappay*self.eps/self.dt + self.sigey/2))
+        self.bet = 1/(2*self.gamma/self.dt + 1 + self.sigma_DC/4/(self.kappax*self.eps/self.dt + self.sigex/2) + self.sigma_DC/4/(self.kappay*self.eps/self.dt + self.sigey/2))
         self.G = (2*self.gamma/self.dt - 1)/(2*self.gamma/self.dt + 1)
         self.F = self.sigma_DC/(2*self.gamma/self.dt + 1)
         self.X = 2*self.gamma/self.dt/(2*self.gamma/self.dt + 1)*self.B_ade
-        self.Xy = 2*self.gamma/self.dt/(2*self.gamma/self.dt + 1)*self.Dzy_ade
-        self.Xx = 2*self.gamma/self.dt/(2*self.gamma/self.dt + 1)*self.Dzx_ade
+        self.W = self.alph*self.bet
+        self.Xx = 2*self.sigma_DC*self.kappax*self.eps/self.dt*self.Dzx*self.bet
+        self.Xy = 2*self.sigma_DC*self.kappay*self.eps/self.dt*self.Dzy*self.bet
+        self.Yy = self.sigma_DC*self.Dzx*self.bet
+        self.Yx = self.sigma_DC*self.Dzy*self.bet
         
     def add_source(self,xs,ys,J0,tc,width,Wc=None):
         self.xs = xs
@@ -144,7 +150,6 @@ class Yee:
         self.sigma_DC[x_start:x_end,y_start:y_end] = sigma_DC
         self.gamma[x_start:x_end,y_start:y_end] = gamma
         self.drude = True
-        self.Ez_old = np.zeros((self.Nx+1,self.Ny+1))
         self.make_matrices()
         
     def restart(self):
@@ -226,33 +231,35 @@ class Yee:
         self.source_Ez.append(self.Ez[self.xs,self.ys])
 
     def update_drude_PML(self):
+        # Update Jc
+        self.Jc_old = np.copy(self.Jc)
+        self.Jc[1:-1,1:-1] = (self.W*self.Jc + self.Xx*self.Ezx + self.Xy*self.Ezy)[1:-1,1:-1] + (
+            self.Yy[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
+            + self.Yx[1:-1,1:-1]/self.dy_dual*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
+        )
         # Update Ez:
-        self.Ez_old = self.Ez.copy()
         self.Ezy[1:-1,1:-1] = (
-            self.Czy_ade[1:-1,1:-1]*self.Ezy[1:-1,1:-1] 
-            - self.Dzy_ade[1:-1,1:-1]/self.dy_dual*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
+            self.Czy[1:-1,1:-1]*self.Ezy[1:-1,1:-1] 
+            - self.Dzy[1:-1,1:-1]/self.dy_dual*(self.Hx[1:-1,1:]-self.Hx[1:-1,:-1])
+            - self.Dzy[1:-1,1:-1]/4*(self.Jc[1:-1,1:-1]+self.Jc_old[1:-1,1:-1])
         )
         self.Ezx[1:-1,1:-1] = (
-            self.Czx_ade[1:-1,1:-1]*self.Ezx[1:-1,1:-1] 
-            + self.Dzx_ade[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
+            self.Czx[1:-1,1:-1]*self.Ezx[1:-1,1:-1] 
+            + self.Dzx[1:-1,1:-1]/self.dx_dual[:, np.newaxis]*(self.Hy[1:,1:-1]-self.Hy[:-1,1:-1])
+            - self.Dzx[1:-1,1:-1]/4*(self.Jc[1:-1,1:-1]+self.Jc_old[1:-1,1:-1])
         )
         # Source:
         if self.Wc==None:
-            self.Ezx[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
-            self.Ezy[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+            self.Ezx[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+            self.Ezy[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
         else:
-            self.Ezx[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
-            self.Ezy[self.xs,self.ys] += self.B_ade[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
-        # Induced current
-        self.Ezx += self.Xx*self.Jc/2
-        self.Ezy += self.Xy*self.Jc/2
+            self.Ezx[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
+            self.Ezy[self.xs,self.ys] += self.B[self.xs,self.ys]*self.J0*np.sin(self.Wc*self.n*self.dt)*np.exp(-(self.n*self.dt-self.tc)**2/2/self.width**2)/2
         self.Ez = self.Ezx + self.Ezy
         #Update Hy:
         self.Hy[:,1:-1] = self.Cy[:,1:-1]*self.Hy[:,1:-1] + self.Dy[:,1:-1]/self.dx[:,np.newaxis]*(self.Ez[1:,1:-1]-self.Ez[:-1,1:-1])
         #Update Hx:
         self.Hx[1:-1,:] = self.Cx[1:-1,:]*self.Hx[1:-1,:] - self.Dx[1:-1,:]/self.dy[np.newaxis,:]*(self.Ez[1:-1,1:]-self.Ez[1:-1,:-1])
-        # Update Jc:
-        self.Jc = self.G*self.Jc + self.F*(self.Ez + self.Ez_old)
         #Time step:
         self.n += 1
         self.recorded_Ez.append(self.Ez[self.xr,self.yr])
