@@ -17,7 +17,7 @@ tc = 5*width
 Nt = int(20*tc/dt)
 
 k_max=1
-sigma_max=1 #(m+1)/(150*np.pi*dx[0])
+sigma_max=10 #(m+1)/(150*np.pi*dx[0])
 
 xs = Nx//2
 ys = Ny//2
