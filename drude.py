@@ -167,9 +167,8 @@ band = (Wc + 5/width)/2/np.pi
 mask = freq_Yee_normal < band
 
 ### Plot the transfer function
-plt.plot(freq_Yee_drude[mask]*1e-9,np.abs(Ez_freq_Yee_drude/Ez_freq_Yee_normal)[mask],label = 'Drude material (Yee)')
-plt.plot(freq_FCI_drude[mask]*1e-9,np.abs(Ez_freq_FCI_drude/Ez_freq_FCI_normal)[mask],label = 'Drude material (FCI)')
-plt.plot(Wc/2/np.pi*1e-9**np.ones(2),np.linspace(np.min(np.abs(Ez_freq_Yee_drude/Ez_freq_Yee_normal)[mask]),np.max(np.abs(Ez_freq_Yee_drude/Ez_freq_Yee_normal)[mask]),2),label = 'Cut-off frequency $f_c$',linewidth=0.5)
+plt.plot(freq_Yee_drude[mask]*1e-9,np.abs(Ez_freq_Yee_drude/Ez_freq_Yee_normal)[mask]**2,label = 'Drude material (Yee)')
+plt.plot(freq_FCI_drude[mask]*1e-9,np.abs(Ez_freq_FCI_drude/Ez_freq_FCI_normal)[mask]**2,label = 'Drude material (FCI)')
 plt.xscale('log')
 plt.yscale('log')
 plt.xlabel('Frequency (GHz)')
