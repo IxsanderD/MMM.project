@@ -18,8 +18,8 @@ x0 = a/2+5
 sigma_x = a/5
 xr = 7*a/3+2*b+10
 
-m = 20
-n = 20
+m = 10
+n = 10
 
 m_eff = 0.023*m_e.value
 E = hbar.value**2/(2*m_eff)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)*10**18 # in J
@@ -59,7 +59,7 @@ print(f't_max: {t_max}')
 # solver.animate(speed = 1000)
 # solver.restart()
 
-# solver.update_loop_2()
+# solver.update_loop()
 # solver.show_recorder()
 
 # # Current density:
@@ -86,7 +86,7 @@ print(f't_max: {t_max}')
 
 # E_ana,T_ana = solver.analytical_T()
 
-# solver.update_loop_2()
+# solver.update_loop()
 # solver.show_recorder()
 # t, J_time = solver.J_time()
 # E, J_barrier = solver.J_freq(t,J_time)
@@ -94,7 +94,7 @@ print(f't_max: {t_max}')
 # solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
 # solver.add_recorder(xr)
 
-# solver.update_loop_2()
+# solver.update_loop()
 # solver.show_recorder()
 # t, J_time = solver.J_time()
 # E_num, J_free = solver.J_freq(t,J_time)
@@ -112,16 +112,31 @@ print(f't_max: {t_max}')
 ###
 # With potential V0
 ###
-V0 = 0.05*e.value/10**18
+
+# V0 = 0.05*e.value/10**18
+
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
+
+# solver.add_barriers(U0)
+# solver.add_potential(V0)
+# solver.plot_potential()
+# solver.add_recorder(xr)
+# solver.animate(speed = 1000)
+# solver.restart()
+
+# Comparison of orders:
 
 solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
-
 solver.add_barriers(U0)
-solver.add_potential(V0)
-solver.plot_potential()
 solver.add_recorder(xr)
-solver.animate(speed = 1000)
-solver.restart()
-
-# solver.update_loop_2()
-# solver.show_recorder()
+solver.update_loop()
+t,J = solver.J_time()
+plt.plot(t,J,label='Order 2')
+solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=4,ABC=True)
+solver.add_barriers(U0)
+solver.add_recorder(xr)
+solver.update_loop()
+t,J = solver.J_time()
+plt.plot(t,J,label='Order 4')
+plt.legend()
+plt.show()
