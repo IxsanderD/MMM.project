@@ -6,9 +6,10 @@ from astropy.constants.astropyconst20 import m_e,hbar,e
 import cmath
 
 class RTD:
-    def __init__(self,dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True):
+    def __init__(self,dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order,CFL=0.8,ABC=True):
         self.dx = dx
-        self.dt = dt
+        self.dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2))
+        self.CFL = CFL
         self.a = a
         self.b = b
         self.Lx = 3*a+2*b+20
@@ -18,6 +19,7 @@ class RTD:
         self.x0 = x0
         self.sigma_x = sigma_x
         self.kx = kx
+        self.order = order
         self.E = hbar.value**2*kx**2/(2*0.023*m_e.value)
         self.Nx = int(self.Lx//self.dx)
         self.Nt = int(self.t_max//self.dt)
@@ -42,28 +44,13 @@ class RTD:
         self.psiIm_record_left = []
         self.psiIm_record_right = []
         self.n = 0
-        
-    def deriv2_2(self,psi):
-        res = np.zeros_like(psi)
-        res[1:-1] = (psi[2:]-2*psi[1:-1]+psi[:-2])/self.dx**2
-        res[0] = (psi[1]-2*psi[0]+psi[-1])/self.dx**2
-        res[-1] = (psi[0]-2*psi[-1]+psi[-2])/self.dx**2
-        return res
-        
-    def deriv2_4(self,psi):
-        res = np.zeros_like(psi)
-        res[2:-2] = (-psi[4:]+16*psi[3:-1]-30*psi[2:-2]+16*psi[1:-3]-psi[:-4])/(12*self.dx**2)
-        res[0] = (16*psi[1]-30*psi[0]+16*psi[-1]-psi[-2])/(12*self.dx**2)
-        res[1] = (-psi[3]+16*psi[2]-30*psi[1]+16*psi[0]-psi[-1])/(12*self.dx**2)
-        res[-2] = (-psi[0]+16*psi[-1]-30*psi[-2]+16*psi[-3]-psi[-4])/(12*self.dx**2)
-        res[-1] = (16*psi[0]-30*psi[-1]+16*psi[-2]-psi[-3])/(12*self.dx**2)
-        return res
     
     def add_barriers(self,U0):
         self.U0 = U0
         self.U[int((self.a+10)//self.dx):int((self.a+self.b+10)//self.dx)] = U0
         self.U[int((2*self.a+self.b+10)//self.dx):int((2*self.a+2*self.b+10)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
+        self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+U0/hbar.value)
         
     def add_potential(self,V0):
         self.U[int((self.a+10)//self.dx):int((2*self.a+2*self.b+10)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx+1))
@@ -90,14 +77,34 @@ class RTD:
         plt.legend()
         plt.show()
         
-    def update_2(self):
+    def deriv2_2(self,psi):
+        res = np.zeros_like(psi)
+        res[1:-1] = (psi[2:]-2*psi[1:-1]+psi[:-2])/self.dx**2
+        res[0] = (psi[1]-2*psi[0]+psi[-1])/self.dx**2
+        res[-1] = (psi[0]-2*psi[-1]+psi[-2])/self.dx**2
+        return res
+        
+    def deriv2_4(self,psi):
+        res = np.zeros_like(psi)
+        res[2:-2] = (-psi[4:]+16*psi[3:-1]-30*psi[2:-2]+16*psi[1:-3]-psi[:-4])/(12*self.dx**2)
+        res[0] = (16*psi[1]-30*psi[0]+16*psi[-1]-psi[-2])/(12*self.dx**2)
+        res[1] = (-psi[3]+16*psi[2]-30*psi[1]+16*psi[0]-psi[-1])/(12*self.dx**2)
+        res[-2] = (-psi[0]+16*psi[-1]-30*psi[-2]+16*psi[-3]-psi[-4])/(12*self.dx**2)
+        res[-1] = (16*psi[0]-30*psi[-1]+16*psi[-2]-psi[-3])/(12*self.dx**2)
+        return res
+        
+    def update(self):
         if self.n==0:
             self.psi_Re = np.array([self.C*np.cos(self.kx*i*self.dx)*np.exp(-(i*self.dx-self.x0)**2/(4*self.sigma_x**2)) for i in range(self.Nx)])
             self.psi_Im = np.array([self.C*np.sin(self.kx*i*self.dx)*np.exp(-(i*self.dx-self.x0)**2/(4*self.sigma_x**2)) for i in range(self.Nx)])
-        self.psi_Re += (-self.hbar*self.dt/(2*self.m)*self.deriv2_2(self.psi_Im)
+        if self.order == 2:
+            deriv2 = self.deriv2_2
+        elif self.order == 4:
+            deriv2 = self.deriv2_4
+        self.psi_Re += (-self.hbar*self.dt/(2*self.m)*deriv2(self.psi_Im)
                               + self.dt/self.hbar*(self.U+self.E)*self.psi_Im
                               - self.dt/self.hbar*self.U_Im*self.psi_Re)
-        self.psi_Im += (self.hbar*self.dt/(2*self.m)*self.deriv2_2(self.psi_Re)
+        self.psi_Im += (self.hbar*self.dt/(2*self.m)*deriv2(self.psi_Re)
                               - self.dt/self.hbar*(self.U+self.E)*self.psi_Re
                               - self.dt/self.hbar*self.U_Im*self.psi_Im)
         self.psiRe_record_left.append(self.psi_Re[int(self.xr//self.dx)])
@@ -106,16 +113,9 @@ class RTD:
         self.psiIm_record_right.append(self.psi_Im[int(self.xr//self.dx+1)])
         self.n += 1
     
-    # def update_4(self,m,n):
-    
-    
-    def update_loop_2(self):
+    def update_loop(self):
         for _ in range(self.Nt):
-            self.update_2()
-    
-    # def update_loop_4(self):
-    #     for _ in range(self.Nt):
-    #         self.update_4()
+            self.update()
     
     def animate(self,speed=1,repeat=False):
         fig, axes = plt.subplots(2,1,figsize=(8,6),gridspec_kw={'height_ratios':[3,1]})
@@ -128,7 +128,7 @@ class RTD:
         ax.plot(self.xr,self.C**2/10,'ro',label='Recorder')
         def update(frame):
             for _ in range(speed):
-                self.update_2()
+                self.update()
             im.set_data(np.arange(self.Nx)*self.dx,self.psi_Re**2+self.psi_Im**2)
             return [im]
         

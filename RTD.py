@@ -14,13 +14,12 @@ Ly = 40
 Lz = Ly
 dx = Lx/3000
 U0 = 0.6*e.value*10**(-18)
-dt = 0.8*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
 x0 = a/2+5
 sigma_x = a/5
 xr = 7*a/3+2*b+10
 
-m = 5
-n = 5
+m = 20
+n = 20
 
 m_eff = 0.023*m_e.value
 E = hbar.value**2/(2*m_eff)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)*10**18 # in J
@@ -37,7 +36,7 @@ print(f't_max: {t_max}')
 # Without Absorbing Boundaries:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=False)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=False)
 # solver.add_recorder(xr)
 # solver.animate(speed = 1000)
 
@@ -45,7 +44,7 @@ print(f't_max: {t_max}')
 # With Absorbing Boundaries:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
 # solver.add_recorder(xr)
 # solver.animate(speed = 1000)
 
@@ -53,7 +52,7 @@ print(f't_max: {t_max}')
 # With potential barriers:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
 
 # solver.add_barriers(U0)
 # solver.add_recorder(xr)
@@ -81,7 +80,7 @@ print(f't_max: {t_max}')
 # Validation with analytical solution:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
 # solver.add_barriers(U0)
 # solver.add_recorder(xr)
 
@@ -92,7 +91,7 @@ print(f't_max: {t_max}')
 # t, J_time = solver.J_time()
 # E, J_barrier = solver.J_freq(t,J_time)
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
 # solver.add_recorder(xr)
 
 # solver.update_loop_2()
@@ -115,7 +114,7 @@ print(f't_max: {t_max}')
 ###
 V0 = 0.05*e.value/10**18
 
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
 
 solver.add_barriers(U0)
 solver.add_potential(V0)
