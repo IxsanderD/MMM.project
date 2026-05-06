@@ -15,7 +15,7 @@ class RTD:
         self.CFL = CFL
         self.a = a
         self.b = b
-        self.Lx = 3*a+2*b+20
+        self.Lx = 3*a+2*b+20*10**(-9)
         self.Ly = Ly
         self.Lz = Lz
         self.t_max = t_max
@@ -50,8 +50,8 @@ class RTD:
     
     def add_barriers(self,U0):
         self.U0 = U0
-        self.U[int((self.a+10)//self.dx):int((self.a+self.b+10)//self.dx)] = U0
-        self.U[int((2*self.a+self.b+10)//self.dx):int((2*self.a+2*self.b+10)//self.dx)] = U0
+        self.U[int((self.a+10*10**(-9))//self.dx):int((self.a+self.b+10*10**(-9))//self.dx)] = U0
+        self.U[int((2*self.a+self.b+10*10**(-9))//self.dx):int((2*self.a+2*self.b+10*10**(-9))//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
         if self.order == 2:
             self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+U0/hbar.value)
@@ -59,14 +59,14 @@ class RTD:
             self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+U0/hbar.value)
         
     def add_potential(self,V0):
-        self.U[int((self.a+10)//self.dx):int((2*self.a+2*self.b+10)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx+1))
+        self.U[int((self.a+10*10**(-9))//self.dx):int((2*self.a+2*self.b+10*10**(-9))//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
         if self.order == 2:
             self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
         elif self.order == 4:
             self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
         
     def plot_potential(self):
-        plt.plot(np.arange(self.Nx)*self.dx,self.U/e.value*10**18)
+        plt.plot(np.arange(self.Nx)*self.dx,self.U/e.value)
         plt.xlabel('x')
         plt.ylabel('U')
         plt.xlim(0,self.Lx)
@@ -131,32 +131,33 @@ class RTD:
         fig, axes = plt.subplots(2,1,figsize=(8,6),gridspec_kw={'height_ratios':[3,1]})
         ax = axes[0]
         ax2 = axes[1]
-        im = ax.plot(np.arange(self.Nx)*self.dx,self.psi_Re**2+self.psi_Im**2)[0]
+        im = ax.plot(np.arange(self.Nx)*self.dx*10**9,self.psi_Re**2+self.psi_Im**2)[0]
         ax.set_ylabel(r'$|\psi|^2$')
-        ax.set_xlim(0,self.Lx)
+        ax.set_xlim(0,self.Lx*10**9)
         ax.set_ylim(0,self.C**2)
-        ax.plot(self.xr,self.C**2/10,'ro',label='Recorder')
+        ax.plot(self.xr*10**9,self.C**2/10,'ro',label='Recorder')
         def update(frame):
             for _ in range(speed):
                 self.update()
-            im.set_data(np.arange(self.Nx)*self.dx,self.psi_Re**2+self.psi_Im**2)
+            im.set_data(np.arange(self.Nx)*self.dx*10**9,self.psi_Re**2+self.psi_Im**2)
             return [im]
         
-        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt*1000), repeat=repeat)
-        ax2.plot(np.arange(self.Nx)*self.dx,self.U/e.value*10**18)
+        ani = FuncAnimation(fig, update, frames=self.Nt//speed, repeat=repeat)
+        # ani.save("simulation.gif", writer="pillow", fps=10)
+        ax2.plot(np.arange(self.Nx)*self.dx*10**9,self.U/e.value)
         ax2.set_xlabel('x [nm]')
         ax2.set_ylabel('U [eV]')
-        ax2.set_xlim(0,self.Lx)
+        ax2.set_xlim(0,self.Lx*10**9)
         plt.tight_layout()
         ax.legend()
         plt.show()
         
     def show_psi(self):
-        plt.plot(np.arange(self.Nx)*self.dx,self.psi_Re,label='Re')
-        plt.plot(np.arange(self.Nx)*self.dx,self.psi_Im,label='Im')
+        plt.plot(np.arange(self.Nx)*self.dx*10**9,self.psi_Re,label='Re')
+        plt.plot(np.arange(self.Nx)*self.dx*10**9,self.psi_Im,label='Im')
         plt.xlabel('x')
         plt.ylabel(r'$\psi$')
-        plt.xlim(0,self.Lx)
+        plt.xlim(0,self.Lx*10**9)
         plt.legend()
         plt.show()
         
