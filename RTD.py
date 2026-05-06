@@ -1,11 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.patches import Rectangle
 from Class_RTD import RTD
 from astropy.constants.astropyconst20 import m_e,hbar,e
-import cmath
 
 a = 15*10**(-9)
 b = 5*10**(-9)
@@ -18,15 +14,15 @@ x0 = (a/2+5*10**(-9))
 sigma_x = (a/5)
 xr = (7*a/3+2*b+10*10**(-9))
 
-m = 20
-n = 20
+m = 1
+n = 1
 
 m_eff = 0.023*m_e.value
-E = hbar.value**2/(2*m_eff)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2) # in J
+E = 8*e.value
 print(f'Energy: {E/e.value} eV')
-kx = np.sqrt(2*m_eff*E/hbar.value**2) # in 1/nm
+kx = np.sqrt(2*m_eff*E/hbar.value**2)
 N_layer = 200
-sigma = np.log(100000)/N_layer/dx*E/kx # maybe sqrt(E)? idk
+sigma = np.log(100000)/N_layer/dx*E/kx
 k = 4 # exponent for the absorbing boundary strength
 t_max = 1.5*Lx*np.sqrt(m_eff/2/E)
 
@@ -36,7 +32,7 @@ print(f't_max: {t_max}')
 # Without Absorbing Boundaries:
 ###
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=False)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=False)
 # solver.add_recorder(xr)
 # solver.animate(speed = 1000)
 
@@ -44,7 +40,7 @@ print(f't_max: {t_max}')
 # With Absorbing Boundaries:
 ###
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
 # solver.add_recorder(xr)
 # solver.animate(speed=1000)
 
@@ -52,7 +48,7 @@ print(f't_max: {t_max}')
 # With potential barriers:
 ###
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
 
 # solver.add_barriers(U0)
 # solver.add_recorder(xr)
@@ -80,7 +76,7 @@ print(f't_max: {t_max}')
 # Validation with analytical solution:
 ###
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
 # solver.add_barriers(U0)
 # solver.add_recorder(xr)
 
@@ -91,7 +87,7 @@ print(f't_max: {t_max}')
 # t, J_time = solver.J_time()
 # E, J_barrier = solver.J_freq(t,J_time)
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
 # solver.add_recorder(xr)
 
 # solver.update_loop()
@@ -115,7 +111,7 @@ print(f't_max: {t_max}')
 
 V0 = 0.05*e.value
 
-solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
+solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
 
 solver.add_barriers(U0)
 solver.add_potential(V0)
@@ -126,13 +122,13 @@ solver.restart()
 
 # Comparison of orders:
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=2,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
 # solver.add_barriers(U0)
 # solver.add_recorder(xr)
 # solver.update_loop()
 # t,J = solver.J_time()
 # plt.plot(t,J,label='Order 2')
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order=4,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=4,ABC=True)
 # solver.add_barriers(U0)
 # solver.add_recorder(xr)
 # solver.update_loop()

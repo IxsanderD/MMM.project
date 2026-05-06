@@ -3,10 +3,9 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astropy.constants.astropyconst20 import m_e,hbar,e
-import cmath
 
 class RTD:
-    def __init__(self,dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order,CFL=0.8,ABC=True):
+    def __init__(self,dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order,CFL=0.8,ABC=True):
         self.dx = dx
         if order == 2:
             self.dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2))
@@ -23,7 +22,8 @@ class RTD:
         self.sigma_x = sigma_x
         self.kx = kx
         self.order = order
-        self.E = hbar.value**2*kx**2/(2*0.023*m_e.value)
+        self.E = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
+        print(f'Energy(n,m): {self.E/e.value} eV')
         self.Nx = int(self.Lx//self.dx)
         self.Nt = int(self.t_max//self.dt)
         self.C = 1/np.sqrt(np.sqrt(2*np.pi)*self.sigma_x)
