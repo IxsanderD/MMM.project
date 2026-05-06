@@ -97,7 +97,7 @@ print(f't_max: {t_max}')
 
 # T_num = np.abs(J_barrier/J_free)
 # plt.plot(E_num,T_num,label='Numerical')
-# plt.plot(np.real(E_ana)/e.value*10**18,T_ana,label='Analytical')
+# plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
 # plt.xlabel('Energy [eV]')
 # plt.ylabel('Transmission')
 # # plt.xlim(0,0.6)
@@ -109,16 +109,16 @@ print(f't_max: {t_max}')
 # With potential V0
 ###
 
-V0 = 0.05*e.value
+# V0 = 0.05*e.value
 
-solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
 
-solver.add_barriers(U0)
-solver.add_potential(V0)
-solver.plot_potential()
-solver.add_recorder(xr)
-solver.animate(speed = 1000)
-solver.restart()
+# solver.add_barriers(U0)
+# solver.add_potential(V0)
+# solver.plot_potential()
+# solver.add_recorder(xr)
+# solver.animate(speed = 1000)
+# solver.restart()
 
 # Comparison of orders:
 
