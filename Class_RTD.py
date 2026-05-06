@@ -6,7 +6,7 @@ from astropy.constants.astropyconst20 import m_e,hbar,e
 import cmath
 
 class RTD:
-    def __init__(self,dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,order,CFL=0.8,ABC=True):
+    def __init__(self,dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order,CFL=0.8,ABC=True):
         self.dx = dx
         if order == 2:
             self.dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2))
