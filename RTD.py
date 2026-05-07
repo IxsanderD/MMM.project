@@ -3,16 +3,16 @@ import matplotlib.pyplot as plt
 from Class_RTD import RTD
 from astropy.constants.astropyconst20 import m_e,hbar,e
 
-a = 15*10**(-9)
-b = 5*10**(-9)
-Lx = (3*a+2*b+20*10**(-9)) # Extra space for barrier to not have an influence
-Ly = 40*10**(-9)
+a = 15e-9
+b = 5e-9
+Lx = (3*a+2*b+20e-9) # Extra space for barrier to not have an influence
+Ly = 40e-9
 Lz = Ly
 dx = Lx/3000
 U0 = 0.6*e.value
-x0 = (a/2+5*10**(-9))
+x0 = (a/2+5e-9)
 sigma_x = (a/5)
-xr = (7*a/3+2*b+10*10**(-9))
+xr = (7*a/3+2*b+10e-9)
 
 m = 1
 n = 1

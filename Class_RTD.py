@@ -14,7 +14,7 @@ class RTD:
         self.CFL = CFL
         self.a = a
         self.b = b
-        self.Lx = 3*a+2*b+20*10**(-9)
+        self.Lx = 3*a+2*b+20e-9
         self.Ly = Ly
         self.Lz = Lz
         self.t_max = t_max
@@ -50,8 +50,8 @@ class RTD:
     
     def add_barriers(self,U0):
         self.U0 = U0
-        self.U[int((self.a+10*10**(-9))//self.dx):int((self.a+self.b+10*10**(-9))//self.dx)] = U0
-        self.U[int((2*self.a+self.b+10*10**(-9))//self.dx):int((2*self.a+2*self.b+10*10**(-9))//self.dx)] = U0
+        self.U[int((self.a+10e-9)//self.dx):int((self.a+self.b+10e-9)//self.dx)] = U0
+        self.U[int((2*self.a+self.b+10e-9)//self.dx):int((2*self.a+2*self.b+10e-9)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
         if self.order == 2:
             self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+U0/hbar.value)
@@ -59,7 +59,7 @@ class RTD:
             self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+U0/hbar.value)
         
     def add_potential(self,V0):
-        self.U[int((self.a+10*10**(-9))//self.dx):int((2*self.a+2*self.b+10*10**(-9))//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
+        self.U[int((self.a+10e-9)//self.dx):int((2*self.a+2*self.b+10e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
         if self.order == 2:
             self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
         elif self.order == 4:
@@ -161,8 +161,8 @@ class RTD:
         plt.legend()
         plt.show()
         
-    def analytical_T(self): # Should be function of E... Use Fourier to find numerical T(E)
-        E_array = np.linspace(0.01*self.U0,0.99*self.U0,1000)+0j
+    def analytical_T(self):
+        E_array = np.linspace(0.01*self.U0,100*self.U0,1000)+0j
         kx_array = np.sqrt(2*self.m*E_array/self.hbar**2)
         Kx_array = np.sqrt(2*self.m*(E_array-self.U0)/self.hbar**2)
         T = []
@@ -187,6 +187,6 @@ class RTD:
     
     def J_freq(self,t,J_time): # To be continued
         f = np.fft.fftfreq(len(J_time), t[1]-t[0])
-        E = 2*np.pi*self.hbar*f[:len(f)//2] # Random factor? idk...
+        E = 2*np.pi*self.hbar*f[:len(f)//2]/e.value
         J_freq = np.fft.fft(J_time)[:len(f)//2]
         return E, J_freq
