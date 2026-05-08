@@ -8,8 +8,8 @@ b = 5*10**(-9)
 Lx = (3*a+2*b+20*10**(-9)) # Extra space for barrier to not have an influence
 Ly = 40*10**(-9)
 Lz = Ly
-dx = Lx/3000
-U0 = 0.6*e.value
+dx = Lx/1000
+U0 = 0.3*e.value
 x0 = (a/2+5*10**(-9))
 sigma_x = (a/5)
 xr = (7*a/3+2*b+10*10**(-9))
@@ -18,11 +18,11 @@ m = 1
 n = 1
 
 m_eff = 0.023*m_e.value
-E = 8*e.value
+E = 1.6*e.value
 print(f'Energy: {E/e.value} eV')
 kx = np.sqrt(2*m_eff*E/hbar.value**2)
 N_layer = 200
-sigma = np.log(100000)/N_layer/dx*E/kx
+sigma = 100/N_layer/dx*E/kx
 k = 4 # exponent for the absorbing boundary strength
 t_max = 1.5*Lx*np.sqrt(m_eff/2/E)
 
@@ -58,7 +58,9 @@ print(f't_max: {t_max}')
 # solver.update_loop()
 # solver.show_recorder()
 
-# # Current density:
+###
+# Current density:
+###
 
 # t, J_time = solver.J_time()
 # plt.plot(t,J_time)
@@ -76,34 +78,34 @@ print(f't_max: {t_max}')
 # Validation with analytical solution:
 ###
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
-# solver.add_barriers(U0)
-# solver.add_recorder(xr)
+solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver.add_barriers(U0)
+solver.add_recorder(xr)
 
-# E_ana,T_ana = solver.analytical_T()
+E_ana,T_ana = solver.analytical_T()
 
-# solver.update_loop()
-# solver.show_recorder()
-# t, J_time = solver.J_time()
-# E, J_barrier = solver.J_freq(t,J_time)
+solver.update_loop()
+solver.show_recorder()
+t, J_time = solver.J_time()
+E, J_barrier = solver.J_freq(t,J_time)
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
-# solver.add_recorder(xr)
+solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver.add_recorder(xr)
 
-# solver.update_loop()
-# solver.show_recorder()
-# t, J_time = solver.J_time()
-# E_num, J_free = solver.J_freq(t,J_time)
+solver.update_loop()
+solver.show_recorder()
+t, J_time = solver.J_time()
+E_num, J_free = solver.J_freq(t,J_time)
 
-# T_num = np.abs(J_barrier/J_free)
-# plt.plot(E_num,T_num,label='Numerical')
-# plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
-# plt.xlabel('Energy [eV]')
-# plt.ylabel('Transmission')
-# # plt.xlim(0,0.6)
-# # plt.ylim(0,1)
-# plt.legend()
-# plt.show()
+T_num = np.abs(J_barrier/J_free)
+plt.plot(E_num,T_num,label='Numerical')
+plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
+plt.xlabel('Energy [eV]')
+plt.ylabel('Transmission')
+# plt.xlim(0,0.6)
+# plt.ylim(0,1)
+plt.legend()
+plt.show()
 
 ###
 # With potential V0

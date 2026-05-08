@@ -175,6 +175,12 @@ class RTD:
             T.append(1/np.abs(M[0,0])**2)
         return E_array,np.array(T)
     
+    def psi_freq(self):
+        f = np.fft.rfftfreq(len(self.psi_Re),d=self.dt)
+        psi_Re_freq = np.fft.rfft(self.psi_Re)
+        psi_Im_freq = np.fft.rfft(self.psi_Im)
+        return f, psi_Re_freq, psi_Im_freq
+    
     def J_time(self):
         N = 1e26/(self.Ly*self.Lz)
         Re_left = np.array(self.psiRe_record_left)
@@ -187,6 +193,6 @@ class RTD:
     
     def J_freq(self,t,J_time): # To be continued
         f = np.fft.fftfreq(len(J_time), t[1]-t[0])
-        E = 2*np.pi*self.hbar*f[:len(f)//2] # Random factor? idk...
+        E = 2*np.pi*self.hbar*f[:len(f)//2]/e.value # Random factor? idk...
         J_freq = np.fft.fft(J_time)[:len(f)//2]
         return E, J_freq
