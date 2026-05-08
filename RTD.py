@@ -8,23 +8,23 @@ b = 5e-9
 Lx = (3*a+2*b+20e-9) # Extra space for barrier to not have an influence
 Ly = 40e-9
 Lz = Ly
-dx = Lx/3000
+dx = Lx/2000
 U0 = 0.6*e.value
 x0 = (a/2+5e-9)
-sigma_x = (a/5)
+sigma_x = (a/10)
 xr = (7*a/3+2*b+10e-9)
 
 m = 1
 n = 1
 
 m_eff = 0.023*m_e.value
-E = 1.6*e.value
+E = 5*e.value
 print(f'Energy: {E/e.value} eV')
 kx = np.sqrt(2*m_eff*E/hbar.value**2)
 N_layer = 200
-sigma = 100/N_layer/dx*E/kx
+sigma = 10/N_layer/dx*E/kx
 k = 4 # exponent for the absorbing boundary strength
-t_max = 1.5*Lx*np.sqrt(m_eff/2/E)
+t_max = 4*Lx*np.sqrt(m_eff/2/E)
 
 print(f't_max: {t_max}')
 
@@ -40,9 +40,9 @@ print(f't_max: {t_max}')
 # With Absorbing Boundaries:
 ###
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
-# solver.add_recorder(xr)
-# solver.animate(speed=1000)
+solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver.add_recorder(xr)
+solver.animate(speed=1000)
 
 ###
 # With potential barriers:
@@ -75,10 +75,18 @@ print(f't_max: {t_max}')
 # plt.show()
 
 ###
+# Spectral content of the source:
+###
+
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+# solver.spectral_source(2)
+
+###
 # Validation with analytical solution:
 ###
 
 solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+Nt=solver.Nt
 solver.add_barriers(U0)
 solver.add_recorder(xr)
 
@@ -86,19 +94,20 @@ E_ana,T_ana = solver.analytical_T()
 
 solver.update_loop()
 solver.show_recorder()
-t, J_time = solver.J_time()
-E, J_barrier = solver.J_freq(t,J_time)
+E_num, psi_bar = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
+psi_bar_sq = np.abs(psi_bar)**2
 
 solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
 solver.add_recorder(xr)
 
 solver.update_loop()
 solver.show_recorder()
-t, J_time = solver.J_time()
-E_num, J_free = solver.J_freq(t,J_time)
+_, psi_free = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
+psi_free_sq = np.abs(psi_free)**2
+mask=E_num/e.value<10
 
-T_num = np.abs(J_barrier/J_free)
-plt.plot(E_num,T_num,label='Numerical')
+T_num = psi_bar_sq/psi_free_sq
+plt.plot(E_num[mask]/e.value,T_num[mask],label='Numerical')
 plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
 plt.xlabel('Energy [eV]')
 plt.ylabel('Transmission')

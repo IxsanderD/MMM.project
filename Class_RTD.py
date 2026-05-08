@@ -126,43 +126,66 @@ class RTD:
     def update_loop(self):
         for _ in range(self.Nt):
             self.update()
+
+    def spectral_source(self,max_E):
+        kx=self.kx
+        x0=self.x0
+        sigx=self.sigma_x
+        C=self.C
+        x=np.linspace(0,self.Nx*self.dx,self.Nx)
+        source=C*np.exp(1j*kx*x)*np.exp(-(x-x0)**2/4/sigx**2)
+        kx=2*np.pi*np.fft.rfftfreq(self.Nx,d=self.dx)
+        E=self.hbar**2*kx**2/2/self.m/e.value
+        spec_source=np.fft.fft(source)[:len(E)]*self.dx
+        mask= E<max_E
+        plt.plot(E[mask],np.abs(spec_source[mask])**2)
+        plt.xlabel(r'Energy [eV]')
+        plt.ylabel(r'Spectrum source [$\frac{1}{m}$]')
+        plt.show()
     
     def animate(self,speed=1,repeat=False):
         fig, axes = plt.subplots(2,1,figsize=(8,6),gridspec_kw={'height_ratios':[3,1]})
-        ax = axes[0]
-        ax2 = axes[1]
-        im = ax.plot(np.arange(self.Nx)*self.dx*10**9,self.psi_Re**2+self.psi_Im**2)[0]
+        ax, ax2 = axes
+        im = ax.plot(np.arange(self.Nx)*self.dx*1e9,self.psi_Re**2+self.psi_Im**2)[0]
         ax.set_ylabel(r'$|\psi|^2$')
-        ax.set_xlim(0,self.Lx*10**9)
+        ax.set_xlim(0,self.Lx*1e9)
         ax.set_ylim(0,self.C**2)
-        ax.plot(self.xr*10**9,self.C**2/10,'ro',label='Recorder')
+        ax.plot(self.xr*1e9,self.C**2/10,'ro',label='Recorder')
+
+        prob_text = ax.text(0.98, 0.95, '', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
+
         def update(frame):
             for _ in range(speed):
                 self.update()
             im.set_data(np.arange(self.Nx)*self.dx*10**9,self.psi_Re**2+self.psi_Im**2)
-            return [im]
+
+            prob = np.trapezoid(self.psi_Re**2 + self.psi_Im**2, dx=self.dx)
+            t_fs = self.n * self.dt * 1e15
+            prob_text.set_text(f'Total prob = {prob:.4f}\nt = {t_fs:.2f} fs')
+
+            return [im,prob_text]
         
         ani = FuncAnimation(fig, update, frames=self.Nt//speed, repeat=repeat)
         # ani.save("simulation.gif", writer="pillow", fps=10)
-        ax2.plot(np.arange(self.Nx)*self.dx*10**9,self.U/e.value)
+        ax2.plot(np.arange(self.Nx)*self.dx*1e9,self.U/e.value)
         ax2.set_xlabel('x [nm]')
         ax2.set_ylabel('U [eV]')
-        ax2.set_xlim(0,self.Lx*10**9)
+        ax2.set_xlim(0,self.Lx*1e9)
         plt.tight_layout()
         ax.legend()
         plt.show()
         
     def show_psi(self):
-        plt.plot(np.arange(self.Nx)*self.dx*10**9,self.psi_Re,label='Re')
-        plt.plot(np.arange(self.Nx)*self.dx*10**9,self.psi_Im,label='Im')
+        plt.plot(np.arange(self.Nx)*self.dx*1e9,self.psi_Re,label='Re')
+        plt.plot(np.arange(self.Nx)*self.dx*1e9,self.psi_Im,label='Im')
         plt.xlabel('x')
         plt.ylabel(r'$\psi$')
-        plt.xlim(0,self.Lx*10**9)
+        plt.xlim(0,self.Lx*1e9)
         plt.legend()
         plt.show()
         
-    def analytical_T(self):
-        E_array = np.linspace(0.01*self.U0,100*self.U0,1000)+0j
+    def analytical_T(self,E_max=10):
+        E_array = np.linspace(0,E_max,10000)*e.value
         kx_array = np.sqrt(2*self.m*E_array/self.hbar**2)
         Kx_array = np.sqrt(2*self.m*(E_array-self.U0)/self.hbar**2)
         T = []
@@ -175,11 +198,10 @@ class RTD:
             T.append(1/np.abs(M[0,0])**2)
         return E_array,np.array(T)
     
-    def psi_freq(self):
-        f = np.fft.rfftfreq(len(self.psi_Re),d=self.dt)
-        psi_Re_freq = np.fft.rfft(self.psi_Re)
-        psi_Im_freq = np.fft.rfft(self.psi_Im)
-        return f, psi_Re_freq, psi_Im_freq
+    def psi_freq(self,psi_Re,psi_Im):
+        f = np.fft.rfftfreq(len(psi_Re),d=self.dt)
+        psi_freq=np.fft.fft(psi_Re+1j*psi_Im)[:len(f)]
+        return 2*np.pi*self.hbar*f, psi_freq
     
     def J_time(self):
         N = 1e26/(self.Ly*self.Lz)
@@ -192,7 +214,8 @@ class RTD:
         return t, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
     
     def J_freq(self,t,J_time): # To be continued
-        f = np.fft.fftfreq(len(J_time), t[1]-t[0])
-        E = 2*np.pi*self.hbar*f[:len(f)//2]/e.value
-        J_freq = np.fft.fft(J_time)[:len(f)//2]
-        return E, J_freq
+        N = 1e26/(self.Ly*self.Lz)
+        f, psi_Re_freq_left, psi_Im_freq_left = self.psi_freq(self.psiRe_record_left,self.psiIm_record_left)
+        _, psi_Re_freq_right, psi_Im_freq_right = self.psi_freq(self.psiRe_record_right,self.psiIm_record_right)
+        J = psi_Re_freq_left*psi_Im_freq_right-psi_Im_freq_left*psi_Re_freq_right
+        return f, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
