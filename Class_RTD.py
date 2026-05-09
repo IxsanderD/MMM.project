@@ -50,8 +50,8 @@ class RTD:
     
     def add_barriers(self,U0):
         self.U0 = U0
-        self.U[int((self.a+20e-9)//self.dx):int((self.a+self.b+20e-9)//self.dx)] = U0
-        self.U[int((2*self.a+self.b+20e-9)//self.dx):int((2*self.a+2*self.b+20e-9)//self.dx)] = U0
+        self.U[int((self.a+25e-9)//self.dx):int((self.a+self.b+25e-9)//self.dx)] = U0
+        self.U[int((2*self.a+self.b+25e-9)//self.dx):int((2*self.a+2*self.b+25e-9)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
         if self.order == 2:
             self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+U0/hbar.value)
@@ -59,7 +59,7 @@ class RTD:
             self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+U0/hbar.value)
         
     def add_potential(self,V0):
-        self.U[int((self.a+20e-9)//self.dx):int((2*self.a+2*self.b+20e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
+        self.U[int((self.a+25e-9)//self.dx):int((2*self.a+2*self.b+25e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
         if self.order == 2:
             self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
         elif self.order == 4:
