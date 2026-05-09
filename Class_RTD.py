@@ -36,7 +36,7 @@ class RTD:
         # Absorbing Boundaries:
         self.U_Im = np.zeros(self.Nx)
         if ABC:
-            self.U_Im[:N_layer] += np.array([sigma*(i/N_layer)**k for i in range(N_layer-1,-1,-1)])
+            # self.U_Im[:N_layer] += np.array([sigma*(i/N_layer)**k for i in range(N_layer-1,-1,-1)])
             self.U_Im[-N_layer:] += np.array([sigma*(i/N_layer)**k for i in range(N_layer)])
     
     def restart(self):
@@ -66,10 +66,12 @@ class RTD:
             self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
         
     def plot_potential(self):
-        plt.plot(np.arange(self.Nx)*self.dx,self.U/e.value)
-        plt.xlabel('x')
-        plt.ylabel('U')
-        plt.xlim(0,self.Lx)
+        plt.plot(np.arange(self.Nx)*self.dx*1e9,self.U/e.value,label='Re')
+        plt.plot(np.arange(self.Nx)*self.dx*1e9,self.U_Im/e.value,label='Im')
+        plt.legend()
+        plt.xlabel('x [nm]')
+        plt.ylabel('U [eV]')
+        plt.xlim(0,self.Lx*1e9)
         plt.show()
         
     def add_recorder(self,xr):

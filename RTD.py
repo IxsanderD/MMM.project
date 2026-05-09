@@ -11,22 +11,22 @@ Lz = Ly
 dx = Lx/1500
 U0 = 0.6*e.value
 CFL=0.99
-sigma_x = (a/4)
-x0 = 5*sigma_x
-xr = (9*a/4+2*b+25e-9)
+sigma_x = a/4
+x0 = a
+xr = 2*a+2*b+25e-9+dx
 
 m = 20
 n = 20
 
 m_eff = 0.023*m_e.value
 dt=CFL*2/(2*hbar.value/m_eff*(1/dx**2)+1/hbar.value*U0)
-E = 0.15*e.value
+E = 0.6*e.value
 print(f'Energy: {E/e.value} eV')
 kx = np.sqrt(2*m_eff*E/hbar.value**2)
-N_layer = 300
-alpha = 0.1
+N_layer = 200
+alpha = 0.5
 sigma = alpha * hbar.value / (dt * N_layer)
-k = 4 # exponent for the absorbing boundary strength
+k = 3.5 # exponent for the absorbing boundary strength
 t_max = 3*Lx*np.sqrt(m_eff/2/E)
 
 print(f't_max: {t_max}')
@@ -45,18 +45,24 @@ print(f't_max: {t_max}')
 
 solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,CFL=CFL,order=2,ABC=True)
 solver.add_recorder(xr)
-solver.animate(speed=1000)
+
+solver.animate(speed=2000)
+solver.restart()
+
+# solver.update_loop()
+# solver.show_recorder()
 
 ###
 # With potential barriers:
 ###
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver.add_barriers(U0)
+solver.add_recorder(xr)
+solver.plot_potential()
 
-# solver.add_barriers(U0)
-# solver.add_recorder(xr)
-# solver.animate(speed = 1000)
-# solver.restart()
+solver.animate(speed = 1000)
+solver.restart()
 
 # solver.update_loop()
 # solver.show_recorder()
@@ -81,8 +87,8 @@ solver.animate(speed=1000)
 # Spectral content of the source:
 ###
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
-# solver.spectral_source(2)
+solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver.spectral_source(2)
 
 ###
 # Validation with analytical solution:
