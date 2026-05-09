@@ -150,7 +150,7 @@ class RTD:
         ax.set_ylabel(r'$|\psi|^2$')
         ax.set_xlim(0,self.Lx*1e9)
         ax.set_ylim(0,self.C**2)
-        ax.plot(self.xr*1e9,self.C**2/10,'ro',label='Recorder')
+        ax.vlines(self.xr*1e9,0,self.C**2,color = 'red',linestyle='--',label='Recorder')
 
         prob_text = ax.text(0.98, 0.95, '', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
 
