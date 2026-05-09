@@ -80,9 +80,9 @@ class RTD:
         self.psiIm_record_right = []
     
     def show_recorder(self):
-        plt.plot(np.arange(len(self.psiRe_record_left))*self.dt,np.array(self.psiRe_record_left),label='Re')
-        plt.plot(np.arange(len(self.psiIm_record_left))*self.dt,np.array(self.psiIm_record_left),label='Im')
-        plt.xlabel('Time')
+        plt.plot(np.arange(len(self.psiRe_record_left))*self.dt*1e15,np.array(self.psiRe_record_left),label='Re')
+        plt.plot(np.arange(len(self.psiIm_record_left))*self.dt*1e15,np.array(self.psiIm_record_left),label='Im')
+        plt.xlabel('Time [fs]')
         plt.ylabel(r'$\psi(x_r)$')
         plt.legend()
         plt.show()
