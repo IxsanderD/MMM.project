@@ -1,35 +1,30 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.patches import Rectangle
 from Class_RTD import RTD
 from astropy.constants.astropyconst20 import m_e,hbar,e
-import cmath
 
-a = 15
-b = 5
-Lx = 3*a+2*b+20 # Extra space for barrier to not have an influence
-Ly = 40
+a = 15e-9
+b = 5e-9
+Lx = (3*a+2*b+20e-9) # Extra space for barrier to not have an influence
+Ly = 40e-9
 Lz = Ly
-dx = Lx/3000
-U0 = 0.6*e.value*10**(-18)
-dt = 0.8*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-x0 = a/2+5
-sigma_x = a/5
-xr = 7*a/3+2*b+10
+dx = Lx/2000
+U0 = 0.6*e.value
+x0 = (a/2+5e-9)
+sigma_x = (a/10)
+xr = (7*a/3+2*b+10e-9)
 
-m = 5
-n = 5
+m = 1
+n = 1
 
 m_eff = 0.023*m_e.value
-E = hbar.value**2/(2*m_eff)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)*10**18 # in J
+E = 5*e.value
 print(f'Energy: {E/e.value} eV')
-kx = np.sqrt(2*m_eff*E/hbar.value**2)*10**(-9) # in 1/nm
-sigma = 5*np.sqrt(E)*10**(-27) # maybe sqrt(E)? idk
-k = 4 # exponent for the absorbing boundary strength
+kx = np.sqrt(2*m_eff*E/hbar.value**2)
 N_layer = 200
-t_max = 1e-5/np.sqrt(E)
+sigma = 10/N_layer/dx*E/kx
+k = 4 # exponent for the absorbing boundary strength
+t_max = 4*Lx*np.sqrt(m_eff/2/E)
 
 print(f't_max: {t_max}')
 
@@ -37,7 +32,7 @@ print(f't_max: {t_max}')
 # Without Absorbing Boundaries:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=False)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=False)
 # solver.add_recorder(xr)
 # solver.animate(speed = 1000)
 
@@ -45,25 +40,27 @@ print(f't_max: {t_max}')
 # With Absorbing Boundaries:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
-# solver.add_recorder(xr)
-# solver.animate(speed = 1000)
+solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver.add_recorder(xr)
+solver.animate(speed=1000)
 
 ###
 # With potential barriers:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
 
 # solver.add_barriers(U0)
 # solver.add_recorder(xr)
 # solver.animate(speed = 1000)
 # solver.restart()
 
-# solver.update_loop_2()
+# solver.update_loop()
 # solver.show_recorder()
 
-# # Current density:
+###
+# Current density:
+###
 
 # t, J_time = solver.J_time()
 # plt.plot(t,J_time)
@@ -78,51 +75,75 @@ print(f't_max: {t_max}')
 # plt.show()
 
 ###
+# Spectral content of the source:
+###
+
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+# solver.spectral_source(2)
+
+###
 # Validation with analytical solution:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
-# solver.add_barriers(U0)
-# solver.add_recorder(xr)
+solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+Nt=solver.Nt
+solver.add_barriers(U0)
+solver.add_recorder(xr)
 
-# E_ana,T_ana = solver.analytical_T()
+E_ana,T_ana = solver.analytical_T()
 
-# solver.update_loop_2()
-# solver.show_recorder()
-# t, J_time = solver.J_time()
-# E, J_barrier = solver.J_freq(t,J_time)
+solver.update_loop()
+solver.show_recorder()
+E_num, psi_bar = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
+psi_bar_sq = np.abs(psi_bar)**2
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
-# solver.add_recorder(xr)
+solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver.add_recorder(xr)
 
-# solver.update_loop_2()
-# solver.show_recorder()
-# t, J_time = solver.J_time()
-# E_num, J_free = solver.J_freq(t,J_time)
+solver.update_loop()
+solver.show_recorder()
+_, psi_free = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
+psi_free_sq = np.abs(psi_free)**2
+mask=E_num/e.value<10
 
-# T_num = np.abs(J_barrier/J_free)
-# plt.plot(E_num,T_num,label='Numerical')
-# plt.plot(np.real(E_ana)/e.value*10**18,T_ana,label='Analytical')
-# plt.xlabel('Energy [eV]')
-# plt.ylabel('Transmission')
-# # plt.xlim(0,0.6)
-# # plt.ylim(0,1)
-# plt.legend()
-# plt.show()
+T_num = psi_bar_sq/psi_free_sq
+plt.plot(E_num[mask]/e.value,T_num[mask],label='Numerical')
+plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
+plt.xlabel('Energy [eV]')
+plt.ylabel('Transmission')
+# plt.xlim(0,0.6)
+# plt.ylim(0,1)
+plt.legend()
+plt.show()
 
 ###
 # With potential V0
 ###
-V0 = 0.05*e.value/10**18
 
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True)
+# V0 = 0.05*e.value
 
-solver.add_barriers(U0)
-solver.add_potential(V0)
-solver.plot_potential()
-solver.add_recorder(xr)
-solver.animate(speed = 1000)
-solver.restart()
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
 
-# solver.update_loop_2()
-# solver.show_recorder()
+# solver.add_barriers(U0)
+# solver.add_potential(V0)
+# solver.plot_potential()
+# solver.add_recorder(xr)
+# solver.animate(speed = 1000)
+# solver.restart()
+
+# Comparison of orders:
+
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+# solver.add_barriers(U0)
+# solver.add_recorder(xr)
+# solver.update_loop()
+# t,J = solver.J_time()
+# plt.plot(t,J,label='Order 2')
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=4,ABC=True)
+# solver.add_barriers(U0)
+# solver.add_recorder(xr)
+# solver.update_loop()
+# t,J = solver.J_time()
+# plt.plot(t,J,label='Order 4')
+# plt.legend()
+# plt.show()

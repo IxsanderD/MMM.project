@@ -3,22 +3,27 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astropy.constants.astropyconst20 import m_e,hbar,e
-import cmath
 
 class RTD:
-    def __init__(self,dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,ABC=True):
+    def __init__(self,dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order,CFL=0.8,ABC=True):
         self.dx = dx
-        self.dt = dt
+        if order == 2:
+            self.dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2))
+        elif order == 4:
+            self.dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2))
+        self.CFL = CFL
         self.a = a
         self.b = b
-        self.Lx = 3*a+2*b+20
+        self.Lx = 3*a+2*b+20e-9
         self.Ly = Ly
         self.Lz = Lz
         self.t_max = t_max
         self.x0 = x0
         self.sigma_x = sigma_x
         self.kx = kx
-        self.E = hbar.value**2*kx**2/(2*0.023*m_e.value)
+        self.order = order
+        self.E = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
+        print(f'Energy(n,m): {self.E/e.value} eV')
         self.Nx = int(self.Lx//self.dx)
         self.Nt = int(self.t_max//self.dt)
         self.C = 1/np.sqrt(np.sqrt(2*np.pi)*self.sigma_x)
@@ -42,6 +47,45 @@ class RTD:
         self.psiIm_record_left = []
         self.psiIm_record_right = []
         self.n = 0
+    
+    def add_barriers(self,U0):
+        self.U0 = U0
+        self.U[int((self.a+10e-9)//self.dx):int((self.a+self.b+10e-9)//self.dx)] = U0
+        self.U[int((2*self.a+self.b+10e-9)//self.dx):int((2*self.a+2*self.b+10e-9)//self.dx)] = U0
+        self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
+        if self.order == 2:
+            self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+U0/hbar.value)
+        elif self.order == 4:
+            self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+U0/hbar.value)
+        
+    def add_potential(self,V0):
+        self.U[int((self.a+10e-9)//self.dx):int((2*self.a+2*self.b+10e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
+        if self.order == 2:
+            self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
+        elif self.order == 4:
+            self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
+        
+    def plot_potential(self):
+        plt.plot(np.arange(self.Nx)*self.dx,self.U/e.value)
+        plt.xlabel('x')
+        plt.ylabel('U')
+        plt.xlim(0,self.Lx)
+        plt.show()
+        
+    def add_recorder(self,xr):
+        self.xr = xr
+        self.psiRe_record_left = []
+        self.psiRe_record_right = []
+        self.psiIm_record_left = []
+        self.psiIm_record_right = []
+    
+    def show_recorder(self):
+        plt.plot(np.arange(len(self.psiRe_record_left))*self.dt,np.array(self.psiRe_record_left),label='Re')
+        plt.plot(np.arange(len(self.psiIm_record_left))*self.dt,np.array(self.psiIm_record_left),label='Im')
+        plt.xlabel('Time')
+        plt.ylabel(r'$\psi(x_r)$')
+        plt.legend()
+        plt.show()
         
     def deriv2_2(self,psi):
         res = np.zeros_like(psi)
@@ -58,46 +102,19 @@ class RTD:
         res[-2] = (-psi[0]+16*psi[-1]-30*psi[-2]+16*psi[-3]-psi[-4])/(12*self.dx**2)
         res[-1] = (16*psi[0]-30*psi[-1]+16*psi[-2]-psi[-3])/(12*self.dx**2)
         return res
-    
-    def add_barriers(self,U0):
-        self.U0 = U0
-        self.U[int((self.a+10)//self.dx):int((self.a+self.b+10)//self.dx)] = U0
-        self.U[int((2*self.a+self.b+10)//self.dx):int((2*self.a+2*self.b+10)//self.dx)] = U0
-        self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
         
-    def add_potential(self,V0):
-        self.U[int((self.a+10)//self.dx):int((2*self.a+2*self.b+10)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx+1))
-        
-    def plot_potential(self):
-        plt.plot(np.arange(self.Nx)*self.dx,self.U/e.value*10**18)
-        plt.xlabel('x')
-        plt.ylabel('U')
-        plt.xlim(0,self.Lx)
-        plt.show()
-        
-    def add_recorder(self,xr):
-        self.xr = xr
-        self.psiRe_record_left = []
-        self.psiRe_record_right = []
-        self.psiIm_record_left = []
-        self.psiIm_record_right = []
-    
-    def show_recorder(self):
-        plt.plot(np.arange(len(self.psiRe_record_left))*self.dt,np.array(self.psiRe_record_left),label='Re')
-        plt.plot(np.arange(len(self.psiIm_record_left))*self.dt,np.array(self.psiIm_record_left),label='Im')
-        plt.xlabel('Time [s]')
-        plt.ylabel(r'$\psi(x_r)$')
-        plt.legend()
-        plt.show()
-        
-    def update_2(self):
+    def update(self):
         if self.n==0:
             self.psi_Re = np.array([self.C*np.cos(self.kx*i*self.dx)*np.exp(-(i*self.dx-self.x0)**2/(4*self.sigma_x**2)) for i in range(self.Nx)])
             self.psi_Im = np.array([self.C*np.sin(self.kx*i*self.dx)*np.exp(-(i*self.dx-self.x0)**2/(4*self.sigma_x**2)) for i in range(self.Nx)])
-        self.psi_Re += (-self.hbar*self.dt/(2*self.m)*self.deriv2_2(self.psi_Im)
+        if self.order == 2:
+            deriv2 = self.deriv2_2
+        elif self.order == 4:
+            deriv2 = self.deriv2_4
+        self.psi_Re += (-self.hbar*self.dt/(2*self.m)*deriv2(self.psi_Im)
                               + self.dt/self.hbar*(self.U+self.E)*self.psi_Im
                               - self.dt/self.hbar*self.U_Im*self.psi_Re)
-        self.psi_Im += (self.hbar*self.dt/(2*self.m)*self.deriv2_2(self.psi_Re)
+        self.psi_Im += (self.hbar*self.dt/(2*self.m)*deriv2(self.psi_Re)
                               - self.dt/self.hbar*(self.U+self.E)*self.psi_Re
                               - self.dt/self.hbar*self.U_Im*self.psi_Im)
         self.psiRe_record_left.append(self.psi_Re[int(self.xr//self.dx)])
@@ -106,52 +123,69 @@ class RTD:
         self.psiIm_record_right.append(self.psi_Im[int(self.xr//self.dx+1)])
         self.n += 1
     
-    # def update_4(self,m,n):
-    
-    
-    def update_loop_2(self):
+    def update_loop(self):
         for _ in range(self.Nt):
-            self.update_2()
-    
-    # def update_loop_4(self):
-    #     for _ in range(self.Nt):
-    #         self.update_4()
+            self.update()
+
+    def spectral_source(self,max_E):
+        kx=self.kx
+        x0=self.x0
+        sigx=self.sigma_x
+        C=self.C
+        x=np.linspace(0,self.Nx*self.dx,self.Nx)
+        source=C*np.exp(1j*kx*x)*np.exp(-(x-x0)**2/4/sigx**2)
+        kx=2*np.pi*np.fft.rfftfreq(self.Nx,d=self.dx)
+        E=self.hbar**2*kx**2/2/self.m/e.value
+        spec_source=np.fft.fft(source)[:len(E)]*self.dx
+        mask= E<max_E
+        plt.plot(E[mask],np.abs(spec_source[mask])**2)
+        plt.xlabel(r'Energy [eV]')
+        plt.ylabel(r'Spectrum source [$\frac{1}{m}$]')
+        plt.show()
     
     def animate(self,speed=1,repeat=False):
         fig, axes = plt.subplots(2,1,figsize=(8,6),gridspec_kw={'height_ratios':[3,1]})
-        ax = axes[0]
-        ax2 = axes[1]
-        im = ax.plot(np.arange(self.Nx)*self.dx,self.psi_Re**2+self.psi_Im**2)[0]
+        ax, ax2 = axes
+        im = ax.plot(np.arange(self.Nx)*self.dx*1e9,self.psi_Re**2+self.psi_Im**2)[0]
         ax.set_ylabel(r'$|\psi|^2$')
-        ax.set_xlim(0,self.Lx)
+        ax.set_xlim(0,self.Lx*1e9)
         ax.set_ylim(0,self.C**2)
-        ax.plot(self.xr,self.C**2/10,'ro',label='Recorder')
+        ax.plot(self.xr*1e9,self.C**2/10,'ro',label='Recorder')
+
+        prob_text = ax.text(0.98, 0.95, '', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
+
         def update(frame):
             for _ in range(speed):
-                self.update_2()
-            im.set_data(np.arange(self.Nx)*self.dx,self.psi_Re**2+self.psi_Im**2)
-            return [im]
+                self.update()
+            im.set_data(np.arange(self.Nx)*self.dx*10**9,self.psi_Re**2+self.psi_Im**2)
+
+            prob = np.trapezoid(self.psi_Re**2 + self.psi_Im**2, dx=self.dx)
+            t_fs = self.n * self.dt * 1e15
+            prob_text.set_text(f'Total prob = {prob:.4f}\nt = {t_fs:.2f} fs')
+
+            return [im,prob_text]
         
-        ani = FuncAnimation(fig, update, frames=self.Nt//speed, interval=int(self.dt*1000), repeat=repeat)
-        ax2.plot(np.arange(self.Nx)*self.dx,self.U/e.value*10**18)
+        ani = FuncAnimation(fig, update, frames=self.Nt//speed, repeat=repeat)
+        # ani.save("simulation.gif", writer="pillow", fps=10)
+        ax2.plot(np.arange(self.Nx)*self.dx*1e9,self.U/e.value)
         ax2.set_xlabel('x [nm]')
         ax2.set_ylabel('U [eV]')
-        ax2.set_xlim(0,self.Lx)
+        ax2.set_xlim(0,self.Lx*1e9)
         plt.tight_layout()
         ax.legend()
         plt.show()
         
     def show_psi(self):
-        plt.plot(np.arange(self.Nx)*self.dx,self.psi_Re,label='Re')
-        plt.plot(np.arange(self.Nx)*self.dx,self.psi_Im,label='Im')
+        plt.plot(np.arange(self.Nx)*self.dx*1e9,self.psi_Re,label='Re')
+        plt.plot(np.arange(self.Nx)*self.dx*1e9,self.psi_Im,label='Im')
         plt.xlabel('x')
         plt.ylabel(r'$\psi$')
-        plt.xlim(0,self.Lx)
+        plt.xlim(0,self.Lx*1e9)
         plt.legend()
         plt.show()
         
-    def analytical_T(self): # Should be function of E... Use Fourier to find numerical T(E)
-        E_array = np.linspace(0.01*self.U0,0.99*self.U0,1000)+0j
+    def analytical_T(self,E_max=10):
+        E_array = np.linspace(0,E_max,10000)*e.value
         kx_array = np.sqrt(2*self.m*E_array/self.hbar**2)
         Kx_array = np.sqrt(2*self.m*(E_array-self.U0)/self.hbar**2)
         T = []
@@ -164,6 +198,11 @@ class RTD:
             T.append(1/np.abs(M[0,0])**2)
         return E_array,np.array(T)
     
+    def psi_freq(self,psi_Re,psi_Im):
+        f = np.fft.rfftfreq(len(psi_Re),d=self.dt)
+        psi_freq=np.fft.fft(psi_Re+1j*psi_Im)[:len(f)]
+        return 2*np.pi*self.hbar*f, psi_freq
+    
     def J_time(self):
         N = 1e26/(self.Ly*self.Lz)
         Re_left = np.array(self.psiRe_record_left)
@@ -175,7 +214,8 @@ class RTD:
         return t, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
     
     def J_freq(self,t,J_time): # To be continued
-        f = np.fft.fftfreq(len(J_time), t[1]-t[0])
-        E = 2*np.pi*self.hbar*f[:len(f)//2] # Random factor? idk...
-        J_freq = np.fft.fft(J_time)[:len(f)//2]
-        return E, J_freq
+        N = 1e26/(self.Ly*self.Lz)
+        f, psi_Re_freq_left, psi_Im_freq_left = self.psi_freq(self.psiRe_record_left,self.psiIm_record_left)
+        _, psi_Re_freq_right, psi_Im_freq_right = self.psi_freq(self.psiRe_record_right,self.psiIm_record_right)
+        J = psi_Re_freq_left*psi_Im_freq_right-psi_Im_freq_left*psi_Re_freq_right
+        return f, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
