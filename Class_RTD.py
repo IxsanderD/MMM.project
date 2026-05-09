@@ -5,7 +5,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astropy.constants.astropyconst20 import m_e,hbar,e
 
 class RTD:
-    def __init__(self,dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order,CFL=0.8,ABC=True):
+    def __init__(self,dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order,CFL=0.99,ABC=True):
         self.dx = dx
         if order == 2:
             self.dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2))
@@ -14,7 +14,7 @@ class RTD:
         self.CFL = CFL
         self.a = a
         self.b = b
-        self.Lx = 3*a+2*b+20e-9
+        self.Lx = 3*a+2*b+40e-9
         self.Ly = Ly
         self.Lz = Lz
         self.t_max = t_max
@@ -50,8 +50,8 @@ class RTD:
     
     def add_barriers(self,U0):
         self.U0 = U0
-        self.U[int((self.a+10e-9)//self.dx):int((self.a+self.b+10e-9)//self.dx)] = U0
-        self.U[int((2*self.a+self.b+10e-9)//self.dx):int((2*self.a+2*self.b+10e-9)//self.dx)] = U0
+        self.U[int((self.a+20e-9)//self.dx):int((self.a+self.b+20e-9)//self.dx)] = U0
+        self.U[int((2*self.a+self.b+20e-9)//self.dx):int((2*self.a+2*self.b+20e-9)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
         if self.order == 2:
             self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+U0/hbar.value)
@@ -59,7 +59,7 @@ class RTD:
             self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+U0/hbar.value)
         
     def add_potential(self,V0):
-        self.U[int((self.a+10e-9)//self.dx):int((2*self.a+2*self.b+10e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
+        self.U[int((self.a+20e-9)//self.dx):int((2*self.a+2*self.b+20e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
         if self.order == 2:
             self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
         elif self.order == 4:
@@ -111,12 +111,12 @@ class RTD:
             deriv2 = self.deriv2_2
         elif self.order == 4:
             deriv2 = self.deriv2_4
-        self.psi_Re += (-self.hbar*self.dt/(2*self.m)*deriv2(self.psi_Im)
+        self.psi_Re = (-self.hbar*self.dt/(2*self.m)*deriv2(self.psi_Im)
                               + self.dt/self.hbar*(self.U+self.E)*self.psi_Im
-                              - self.dt/self.hbar*self.U_Im*self.psi_Re)
-        self.psi_Im += (self.hbar*self.dt/(2*self.m)*deriv2(self.psi_Re)
+                              +(1-self.dt/2/self.hbar*self.U_Im)*self.psi_Re)/(1+self.dt/2/self.hbar*self.U_Im)
+        self.psi_Im = (self.hbar*self.dt/(2*self.m)*deriv2(self.psi_Re)
                               - self.dt/self.hbar*(self.U+self.E)*self.psi_Re
-                              - self.dt/self.hbar*self.U_Im*self.psi_Im)
+                              +(1-self.dt/2/self.hbar*self.U_Im)*self.psi_Im)/(1+self.dt/2/self.hbar*self.U_Im)
         self.psiRe_record_left.append(self.psi_Re[int(self.xr//self.dx)])
         self.psiIm_record_left.append(self.psi_Im[int(self.xr//self.dx)])
         self.psiRe_record_right.append(self.psi_Re[int(self.xr//self.dx+1)])
@@ -184,18 +184,29 @@ class RTD:
         plt.legend()
         plt.show()
         
-    def analytical_T(self,E_max=10):
-        E_array = np.linspace(0,E_max,10000)*e.value
-        kx_array = np.sqrt(2*self.m*E_array/self.hbar**2)
-        Kx_array = np.sqrt(2*self.m*(E_array-self.U0)/self.hbar**2)
+    def analytical_T(self,E_max=2*0.6):
         T = []
-        for kx,Kx in zip(kx_array,Kx_array):
+        E_array_n = np.linspace(0.01,self.U0/e.value-0.01,10000)*e.value
+        kx_array_n = np.sqrt(2*self.m*E_array_n/self.hbar**2)
+        Kx_array_n = np.sqrt(2*self.m*(self.U0-E_array_n)/self.hbar**2)
+        for kx,Kx in zip(kx_array_n,Kx_array_n):
+            M12 = 1/2*np.array([[1+1j*Kx/kx,1-1j*Kx/kx],[1-1j*Kx/kx,1+1j*Kx/kx]],dtype=complex)
+            M23 = 1/2*np.array([[1-1j*kx/Kx,1+1j*kx/Kx],[1+1j*kx/Kx,1-1j*kx/Kx]],dtype=complex)
+            M1 = np.array([[np.exp(Kx*self.b),0],[0,np.exp(-Kx*self.b)]],dtype=complex)
+            M2 = np.array([[np.exp(-1j*kx*self.a),0],[0,np.exp(1j*kx*self.a)]],dtype=complex)
+            M = M12@M1@M23@M2@M12@M1@M23
+            T.append(1/np.abs(M[0,0])**2)
+        E_array_p = np.linspace(self.U0/e.value+0.01,E_max,10000)*e.value
+        kx_array_p = np.sqrt(2*self.m*E_array_p/self.hbar**2)
+        Kx_array_p = np.sqrt(2*self.m*(E_array_p-self.U0)/self.hbar**2)
+        for kx,Kx in zip(kx_array_p,Kx_array_p):
             M12 = 1/2*np.array([[1+Kx/kx,1-Kx/kx],[1-Kx/kx,1+Kx/kx]],dtype=complex)
             M23 = 1/2*np.array([[1+kx/Kx,1-kx/Kx],[1-kx/Kx,1+kx/Kx]],dtype=complex)
-            M1 = np.array([[np.exp(-1j*kx*self.a),0],[0,np.exp(1j*Kx*self.a)]],dtype=complex)
-            M2 = np.array([[np.exp(-1j*Kx*self.b),0],[0,np.exp(1j*Kx*self.b)]],dtype=complex)
-            M = M12@M2@M23@M1@M12@M2@M23
+            M1 = np.array([[np.exp(-1j*Kx*self.b),0],[0,np.exp(1j*Kx*self.b)]],dtype=complex)
+            M2 = np.array([[np.exp(-1j*kx*self.a),0],[0,np.exp(1j*kx*self.a)]],dtype=complex)
+            M = M12@M1@M23@M2@M12@M1@M23
             T.append(1/np.abs(M[0,0])**2)
+        E_array=np.concatenate((E_array_n,E_array_p))
         return E_array,np.array(T)
     
     def psi_freq(self,psi_Re,psi_Im):
