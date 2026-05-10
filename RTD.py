@@ -95,55 +95,47 @@ solver.spectral_source(2)
 # Validation with analytical solution:
 ###
 
-### 2nd order:
+def T(order,dt):
+    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+    solver.add_barriers(U0)
+    solver.add_recorder(xr)
+
+    solver.update_loop()
+    E_num, psi_bar_Re, psi_bar_Im = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
+    psi_bar_sq = np.abs(psi_bar_Re+1j*psi_bar_Im)**2
+
+    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+    solver.add_recorder(xr)
+
+    solver.update_loop()
+    E_num, psi_free_Re, psi_free_Im = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
+    psi_free_sq = np.abs(psi_free_Re+1j*psi_free_Im)**2
+    mask=E_num/e.value<0.9
+
+    T_num = psi_bar_sq[mask]/psi_free_sq[mask]
+    return E_num[mask]/e.value,T_num
+
+### Analytical solution:
 
 order = 2
 dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-
 solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
 solver.add_barriers(U0)
 solver.add_recorder(xr)
-
 E_ana,T_ana = solver.analytical_T()
 plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
 
-solver.update_loop()
-E_num, psi_bar_Re, psi_bar_Im = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
-psi_bar_sq = np.abs(psi_bar_Re+1j*psi_bar_Im)**2
+###Numerical solutions:
 
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-solver.add_recorder(xr)
+order = 2
+dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
+E2,T2 = T(order,dt)
+plt.plot(E2,T2,label='Numerical 2nd order')
 
-solver.update_loop()
-E_num, psi_free_Re, psi_free_Im = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
-psi_free_sq = np.abs(psi_free_Re+1j*psi_free_Im)**2
-mask=E_num/e.value<0.9
-
-T_num = psi_bar_sq[mask]/psi_free_sq[mask]
-plt.plot(E_num[mask]/e.value,T_num,label='Numerical 2nd order')
-
-### 4th order:
 order = 4
 dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-solver.add_barriers(U0)
-solver.add_recorder(xr)
-
-solver.update_loop()
-E_num, psi_bar_Re, psi_bar_Im = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
-psi_bar_sq = np.abs(psi_bar_Re+1j*psi_bar_Im)**2
-
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-solver.add_recorder(xr)
-
-solver.update_loop()
-E_num, psi_free_Re, psi_free_Im = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
-psi_free_sq = np.abs(psi_free_Re+1j*psi_free_Im)**2
-
-mask=E_num/e.value<0.9
-T_num = psi_bar_sq[mask]/psi_free_sq[mask]
-plt.plot(E_num[mask]/e.value,T_num,label='Numerical 4th order')
+E4,T_4 = T(order,dt)
+plt.plot(E4,T_4,label='Numerical 4th order')
 
 plt.xlabel('Energy [eV]')
 plt.ylabel('Transmission')
