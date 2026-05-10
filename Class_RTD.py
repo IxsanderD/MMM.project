@@ -52,8 +52,8 @@ class RTD:
     
     def add_barriers(self,U0):
         self.U0 = U0
-        self.U[int((self.a+55e-9)//self.dx):int((self.a+self.b+55e-9)//self.dx)] = U0
-        self.U[int((2*self.a+self.b+55e-9)//self.dx):int((2*self.a+2*self.b+55e-9)//self.dx)] = U0
+        self.U[int((self.a+45e-9)//self.dx):int((self.a+self.b+45e-9)//self.dx)] = U0
+        self.U[int((2*self.a+self.b+45e-9)//self.dx):int((2*self.a+2*self.b+45e-9)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
         if self.order == 2:
             self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+U0/hbar.value)
@@ -61,7 +61,7 @@ class RTD:
             self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+U0/hbar.value)
         
     def add_potential(self,V0):
-        self.U[int((self.a+55e-9)//self.dx):int((2*self.a+2*self.b+55e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
+        self.U[int((self.a+45e-9)//self.dx):int((2*self.a+2*self.b+45e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
         if self.order == 2:
             self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
         elif self.order == 4:
@@ -193,7 +193,7 @@ class RTD:
         plt.legend()
         plt.show()
         
-    def analytical_T(self,E_max=2*0.6):
+    def analytical_T(self,E_max=0.9):
         T = []
         E_array_n = np.linspace(0.01,self.U0/e.value-0.01,10000)*e.value
         kx_array_n = np.sqrt(2*self.m*E_array_n/self.hbar**2)
@@ -221,13 +221,10 @@ class RTD:
     def psi_freq(self, psi_Re, psi_Im, eta=None):
         N = len(psi_Re)
         t = np.arange(N) * self.dt
-        if eta is None:
-            eta = 5 / (N * self.dt)
-        damping = np.exp(-eta * t)
         E = np.fft.rfftfreq(N, d=self.dt) * 2*np.pi*self.hbar
-        psi_freq_Re = np.fft.rfft(psi_Re*damping)
-        psi_freq_Im = np.fft.rfft(psi_Im*damping)
-        return E, psi_freq_Re, psi_freq_Im
+        psi_freq_Re = np.fft.rfft(psi_Re)
+        psi_freq_Im = np.fft.rfft(psi_Im)
+        return E-self.E, psi_freq_Re, psi_freq_Im
     
     def J_time(self):
         N = 1e26/(self.Ly*self.Lz)

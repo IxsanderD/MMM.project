@@ -8,26 +8,26 @@ b = 5e-9
 Lx = (3*a+2*b+105e-9) # Extra space for barrier to not have an influence
 Ly = 40e-9
 Lz = Ly
-dx = Lx/2000
+dx = Lx/800
 U0 = 0.6*e.value
 CFL = 0.99
-sigma_x = a/4
-N_layer = 500
+sigma_x = a/3
+N_layer = 120
 x0 = N_layer*dx+2*sigma_x
-xr = 2*a+2*b+55e-9+dx
+xr = 2*a+2*b+45e-9+dx
 
-m = 0
-n = 0
+m = 1
+n = 1
 
 m_eff = 0.023*m_e.value
 dt=CFL*2/(2*hbar.value/m_eff*(1/dx**2)+1/hbar.value*U0)
-E = 0.6*e.value
+E = 0.4*e.value
 print(f'Energy: {E/e.value} eV')
 kx = np.sqrt(2*m_eff*E/hbar.value**2)
-alpha = 2
+alpha = 1.6
 sigma = alpha * hbar.value / (dt * N_layer)
 k = 4 # exponent for the absorbing boundary strength
-t_max = 7*Lx*np.sqrt(m_eff/2/E)
+t_max = 150*Lx*np.sqrt(m_eff/2/E)
 dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
 
 print(f't_max: {t_max}')
@@ -44,11 +44,11 @@ print(f't_max: {t_max}')
 # With Absorbing Boundaries:
 ###
 
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,CFL=CFL,order=2,ABC=True)
-solver.add_recorder(xr)
+# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,CFL=CFL,order=2,ABC=True)
+# solver.add_recorder(xr)
 
-solver.animate(speed=1000)
-solver.restart()
+# solver.animate(speed=50)
+# solver.restart()
 
 # solver.update_loop()
 # solver.show_recorder()
@@ -57,13 +57,13 @@ solver.restart()
 # With potential barriers:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
-# solver.add_barriers(U0)
-# solver.add_recorder(xr)
-# solver.plot_potential()
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver.add_barriers(U0)
+solver.add_recorder(xr)
+solver.plot_potential()
 
-# solver.animate(speed = 1000)
-# solver.restart()
+solver.animate(speed = 50)
+solver.restart()
 
 # solver.update_loop()
 # solver.show_recorder()
@@ -88,44 +88,65 @@ solver.restart()
 # Spectral content of the source:
 ###
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
-# solver.spectral_source(2)
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver.spectral_source(2)
 
 ###
 # Validation with analytical solution:
 ###
 
+### 2nd order:
+
+order = 2
 dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
 
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
 solver.add_barriers(U0)
 solver.add_recorder(xr)
-print(solver.dt,solver.Nt)
 
 E_ana,T_ana = solver.analytical_T()
+plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
 
 solver.update_loop()
-# solver.show_recorder()
 E_num, psi_bar_Re, psi_bar_Im = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
 psi_bar_sq = np.abs(psi_bar_Re+1j*psi_bar_Im)**2
 
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
 solver.add_recorder(xr)
-print(solver.dt,solver.Nt)
 
 solver.update_loop()
-# solver.show_recorder()
 E_num, psi_free_Re, psi_free_Im = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
 psi_free_sq = np.abs(psi_free_Re+1j*psi_free_Im)**2
-mask=E_num/e.value<1.2
+mask=E_num/e.value<0.9
 
 T_num = psi_bar_sq[mask]/psi_free_sq[mask]
-plt.plot(E_num[mask]/e.value,T_num,label='Numerical')
-plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
+plt.plot(E_num[mask]/e.value,T_num,label='Numerical 2nd order')
+
+### 4th order:
+order = 4
+dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
+
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+solver.add_barriers(U0)
+solver.add_recorder(xr)
+
+solver.update_loop()
+E_num, psi_bar_Re, psi_bar_Im = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
+psi_bar_sq = np.abs(psi_bar_Re+1j*psi_bar_Im)**2
+
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+solver.add_recorder(xr)
+
+solver.update_loop()
+E_num, psi_free_Re, psi_free_Im = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
+psi_free_sq = np.abs(psi_free_Re+1j*psi_free_Im)**2
+
+mask=E_num/e.value<0.9
+T_num = psi_bar_sq[mask]/psi_free_sq[mask]
+plt.plot(E_num[mask]/e.value,T_num,label='Numerical 4th order')
+
 plt.xlabel('Energy [eV]')
 plt.ylabel('Transmission')
-# plt.xlim(0,0.6)
-# plt.ylim(0,1)
 plt.legend()
 plt.show()
 
