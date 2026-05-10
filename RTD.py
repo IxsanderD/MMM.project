@@ -5,29 +5,30 @@ from astropy.constants.astropyconst20 import m_e,hbar,e
 
 a = 15e-9
 b = 5e-9
-Lx = (3*a+2*b+40e-9) # Extra space for barrier to not have an influence
+Lx = (3*a+2*b+105e-9) # Extra space for barrier to not have an influence
 Ly = 40e-9
 Lz = Ly
-dx = Lx/1500
+dx = Lx/2000
 U0 = 0.6*e.value
-CFL=0.99
+CFL = 0.99
 sigma_x = a/4
-x0 = a
-xr = 2*a+2*b+25e-9+dx
+N_layer = 500
+x0 = N_layer*dx+2*sigma_x
+xr = 2*a+2*b+55e-9+dx
 
-m = 20
-n = 20
+m = 0
+n = 0
 
 m_eff = 0.023*m_e.value
 dt=CFL*2/(2*hbar.value/m_eff*(1/dx**2)+1/hbar.value*U0)
 E = 0.6*e.value
 print(f'Energy: {E/e.value} eV')
 kx = np.sqrt(2*m_eff*E/hbar.value**2)
-N_layer = 200
-alpha = 0.5
+alpha = 2
 sigma = alpha * hbar.value / (dt * N_layer)
-k = 3.5 # exponent for the absorbing boundary strength
-t_max = 3*Lx*np.sqrt(m_eff/2/E)
+k = 4 # exponent for the absorbing boundary strength
+t_max = 7*Lx*np.sqrt(m_eff/2/E)
+dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
 
 print(f't_max: {t_max}')
 
@@ -43,10 +44,10 @@ print(f't_max: {t_max}')
 # With Absorbing Boundaries:
 ###
 
-solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,CFL=CFL,order=2,ABC=True)
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,CFL=CFL,order=2,ABC=True)
 solver.add_recorder(xr)
 
-solver.animate(speed=2000)
+solver.animate(speed=1000)
 solver.restart()
 
 # solver.update_loop()
@@ -56,13 +57,13 @@ solver.restart()
 # With potential barriers:
 ###
 
-solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
-solver.add_barriers(U0)
-solver.add_recorder(xr)
-solver.plot_potential()
+# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+# solver.add_barriers(U0)
+# solver.add_recorder(xr)
+# solver.plot_potential()
 
-solver.animate(speed = 1000)
-solver.restart()
+# solver.animate(speed = 1000)
+# solver.restart()
 
 # solver.update_loop()
 # solver.show_recorder()
@@ -87,51 +88,54 @@ solver.restart()
 # Spectral content of the source:
 ###
 
-solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
-solver.spectral_source(2)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+# solver.spectral_source(2)
 
 ###
 # Validation with analytical solution:
 ###
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
-# Nt=solver.Nt
-# solver.add_barriers(U0)
-# solver.add_recorder(xr)
+dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
 
-# E_ana,T_ana = solver.analytical_T()
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver.add_barriers(U0)
+solver.add_recorder(xr)
+print(solver.dt,solver.Nt)
 
-# solver.update_loop()
+E_ana,T_ana = solver.analytical_T()
+
+solver.update_loop()
 # solver.show_recorder()
-# E_num, psi_bar = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
-# psi_bar_sq = np.abs(psi_bar)**2
+E_num, psi_bar_Re, psi_bar_Im = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
+psi_bar_sq = np.abs(psi_bar_Re+1j*psi_bar_Im)**2
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
-# solver.add_recorder(xr)
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver.add_recorder(xr)
+print(solver.dt,solver.Nt)
 
-# solver.update_loop()
+solver.update_loop()
 # solver.show_recorder()
-# _, psi_free = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
-# psi_free_sq = np.abs(psi_free)**2
-# mask=E_num/e.value<1.2
+E_num, psi_free_Re, psi_free_Im = solver.psi_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
+psi_free_sq = np.abs(psi_free_Re+1j*psi_free_Im)**2
+mask=E_num/e.value<1.2
 
-# T_num = psi_bar_sq[mask]/psi_free_sq[mask]
-# plt.plot(E_num[mask]/e.value,T_num,label='Numerical')
-# plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
-# plt.xlabel('Energy [eV]')
-# plt.ylabel('Transmission')
-# # plt.xlim(0,0.6)
-# # plt.ylim(0,1)
-# plt.legend()
-# plt.show()
+T_num = psi_bar_sq[mask]/psi_free_sq[mask]
+plt.plot(E_num[mask]/e.value,T_num,label='Numerical')
+plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
+plt.xlabel('Energy [eV]')
+plt.ylabel('Transmission')
+# plt.xlim(0,0.6)
+# plt.ylim(0,1)
+plt.legend()
+plt.show()
 
-###
+# ##
 # With potential V0
-###
+# ##
 
 # V0 = 0.05*e.value
 
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=4,ABC=True)
 
 # solver.add_barriers(U0)
 # solver.add_potential(V0)

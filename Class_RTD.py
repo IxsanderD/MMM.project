@@ -5,16 +5,17 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astropy.constants.astropyconst20 import m_e,hbar,e
 
 class RTD:
-    def __init__(self,dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order,CFL=0.99,ABC=True):
+    def __init__(self,dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order,CFL=0.99,ABC=True):
         self.dx = dx
-        if order == 2:
-            self.dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2))
-        elif order == 4:
-            self.dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2))
+        self.dt = dt
+        # if order == 2:
+        #     self.dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2))
+        # elif order == 4:
+        #     self.dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2))
         self.CFL = CFL
         self.a = a
         self.b = b
-        self.Lx = 3*a+2*b+40e-9
+        self.Lx = 3*a+2*b+105e-9
         self.Ly = Ly
         self.Lz = Lz
         self.t_max = t_max
@@ -35,8 +36,9 @@ class RTD:
         self.hbar = hbar.value
         # Absorbing Boundaries:
         self.U_Im = np.zeros(self.Nx)
+        self.N_layer=N_layer
         if ABC:
-            # self.U_Im[:N_layer] += np.array([sigma*(i/N_layer)**k for i in range(N_layer-1,-1,-1)])
+            self.U_Im[:N_layer] += np.array([sigma*(i/N_layer)**k for i in range(N_layer-1,-1,-1)])
             self.U_Im[-N_layer:] += np.array([sigma*(i/N_layer)**k for i in range(N_layer)])
     
     def restart(self):
@@ -50,8 +52,8 @@ class RTD:
     
     def add_barriers(self,U0):
         self.U0 = U0
-        self.U[int((self.a+25e-9)//self.dx):int((self.a+self.b+25e-9)//self.dx)] = U0
-        self.U[int((2*self.a+self.b+25e-9)//self.dx):int((2*self.a+2*self.b+25e-9)//self.dx)] = U0
+        self.U[int((self.a+55e-9)//self.dx):int((self.a+self.b+55e-9)//self.dx)] = U0
+        self.U[int((2*self.a+self.b+55e-9)//self.dx):int((2*self.a+2*self.b+55e-9)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
         if self.order == 2:
             self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+U0/hbar.value)
@@ -59,7 +61,7 @@ class RTD:
             self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+U0/hbar.value)
         
     def add_potential(self,V0):
-        self.U[int((self.a+25e-9)//self.dx):int((2*self.a+2*self.b+25e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
+        self.U[int((self.a+55e-9)//self.dx):int((2*self.a+2*self.b+55e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
         if self.order == 2:
             self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
         elif self.order == 4:
@@ -156,6 +158,11 @@ class RTD:
 
         prob_text = ax.text(0.98, 0.95, '', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
 
+        abc_left  = self.N_layer * self.dx * 1e9
+        abc_right = (self.Nx - self.N_layer) * self.dx * 1e9
+        ax.axvline(abc_left,  color='gray', linestyle='--', linewidth=0.8, label='ABC start')
+        ax.axvline(abc_right, color='gray', linestyle='--', linewidth=0.8)
+
         def update(frame):
             for _ in range(speed):
                 self.update()
@@ -211,10 +218,16 @@ class RTD:
         E_array=np.concatenate((E_array_n,E_array_p))
         return E_array,np.array(T)
     
-    def psi_freq(self,psi_Re,psi_Im):
-        f = np.fft.rfftfreq(len(psi_Re),d=self.dt)
-        psi_freq=np.fft.fft(psi_Re+1j*psi_Im)[:len(f)]
-        return 2*np.pi*self.hbar*f, psi_freq
+    def psi_freq(self, psi_Re, psi_Im, eta=None):
+        N = len(psi_Re)
+        t = np.arange(N) * self.dt
+        if eta is None:
+            eta = 5 / (N * self.dt)
+        damping = np.exp(-eta * t)
+        E = np.fft.rfftfreq(N, d=self.dt) * 2*np.pi*self.hbar
+        psi_freq_Re = np.fft.rfft(psi_Re*damping)
+        psi_freq_Im = np.fft.rfft(psi_Im*damping)
+        return E, psi_freq_Re, psi_freq_Im
     
     def J_time(self):
         N = 1e26/(self.Ly*self.Lz)
