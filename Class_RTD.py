@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from astropy.constants.astropyconst20 import m_e,hbar,e
+from astropy.constants.astropyconst20 import m_e,hbar,e,h
 
 class RTD:
     def __init__(self,dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order,CFL=0.99,ABC=True):
@@ -15,7 +15,7 @@ class RTD:
         self.CFL = CFL
         self.a = a
         self.b = b
-        self.Lx = 3*a+2*b+105e-9
+        self.Lx = 3*a+2*b+108e-9
         self.Ly = Ly
         self.Lz = Lz
         self.t_max = t_max
@@ -52,20 +52,21 @@ class RTD:
     
     def add_barriers(self,U0):
         self.U0 = U0
-        self.U[int((self.a+45e-9)//self.dx):int((self.a+self.b+45e-9)//self.dx)] = U0
-        self.U[int((2*self.a+self.b+45e-9)//self.dx):int((2*self.a+2*self.b+45e-9)//self.dx)] = U0
+        self.U[int((self.a+48e-9)//self.dx):int((self.a+self.b+48e-9)//self.dx)] = U0
+        self.U[int((2*self.a+self.b+48e-9)//self.dx):int((2*self.a+2*self.b+48e-9)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
-        if self.order == 2:
-            self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+U0/hbar.value)
-        elif self.order == 4:
-            self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+U0/hbar.value)
+        # if self.order == 2:
+        #     self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+U0/hbar.value)
+        # elif self.order == 4:
+        #     self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+U0/hbar.value)
         
     def add_potential(self,V0):
-        self.U[int((self.a+45e-9)//self.dx):int((2*self.a+2*self.b+45e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
-        if self.order == 2:
-            self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
-        elif self.order == 4:
-            self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
+        self.U[int((self.a+48e-9)//self.dx):int((2*self.a+2*self.b+48e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
+        self.Vdc=V0
+        # if self.order == 2:
+        #     self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
+        # elif self.order == 4:
+        #     self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
         
     def plot_potential(self):
         plt.plot(np.arange(self.Nx)*self.dx*1e9,self.U/e.value,label='Re')
@@ -222,8 +223,8 @@ class RTD:
         N = len(psi_Re)
         t = np.arange(N) * self.dt
         E = np.fft.rfftfreq(N, d=self.dt) * 2*np.pi*self.hbar
-        psi_freq_Re = np.fft.rfft(psi_Re)
-        psi_freq_Im = np.fft.rfft(psi_Im)
+        psi_freq_Re = np.fft.rfft(psi_Re)*self.dt
+        psi_freq_Im = np.fft.rfft(psi_Im)*self.dt
         return E-self.E, psi_freq_Re, psi_freq_Im
     
     def J_time(self):
@@ -238,7 +239,15 @@ class RTD:
     
     def J_freq(self,t,J_time): # To be continued
         N = 1e26/(self.Ly*self.Lz)
-        f, psi_Re_freq_left, psi_Im_freq_left = self.psi_freq(self.psiRe_record_left,self.psiIm_record_left)
+        E, psi_Re_freq_left, psi_Im_freq_left = self.psi_freq(self.psiRe_record_left,self.psiIm_record_left)
         _, psi_Re_freq_right, psi_Im_freq_right = self.psi_freq(self.psiRe_record_right,self.psiIm_record_right)
         J = psi_Re_freq_left*psi_Im_freq_right-psi_Im_freq_left*psi_Re_freq_right
-        return f, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
+        return E, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
+    
+    def IV(self,E,T,mu_l=22.436e-3*e.value,Te=0):
+        if Te==0:
+            El = mu_l-e.value*self.Vdc
+            Er = mu_l
+            mask = (El<E)&(Er>E)
+            I = 2*e.value/h.value*np.trapezoid(T[mask],E[mask],dx=E[1]-E[0])
+            return I
