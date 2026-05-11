@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from astropy.constants.astropyconst20 import m_e,hbar,e,h
+from astropy.constants.astropyconst20 import m_e,hbar,e,h,k_B
 
 class RTD:
     def __init__(self,dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order,CFL=0.99,ABC=True):
@@ -61,6 +61,7 @@ class RTD:
         #     self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+U0/hbar.value)
         
     def add_potential(self,V0):
+        self.U[:int((self.a+48e-9)//self.dx)]  = V0*np.ones(int((self.a+48e-9)//self.dx))
         self.U[int((self.a+48e-9)//self.dx):int((2*self.a+2*self.b+48e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
         self.Vdc=V0
         # if self.order == 2:
@@ -245,9 +246,14 @@ class RTD:
         return E, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
     
     def IV(self,E,T,mu_l=22.436e-3*e.value,Te=0):
+        El = mu_l - e.value*self.Vdc - 6*k_B.value*Te
+        Er = mu_l + 6*k_B.value*Te
+        mask = (El<E)&(Er>E)
         if Te==0:
-            El = mu_l-e.value*self.Vdc
-            Er = mu_l
-            mask = (El<E)&(Er>E)
             I = 2*e.value/h.value*np.trapezoid(T[mask],E[mask],dx=E[1]-E[0])
+            return I
+        else:
+            f_L = 1/(np.exp((E-mu_l)/k_B.value/Te)+1)
+            f_R = 1/(np.exp((E-mu_l+e.value*self.Vdc)/k_B.value/Te)+1)
+            I = 2*e.value/h.value*np.trapezoid(T[mask]*(f_L[mask]-f_R[mask]),E[mask],dx=E[1]-E[0])
             return I
