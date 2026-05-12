@@ -8,11 +8,11 @@ b = 5e-9
 Lx = (3*a+2*b+108e-9) # Extra space for barrier to not have an influence
 Ly = 40e-9
 Lz = Ly
-dx = Lx/700
+dx = Lx/1000
 U0 = 0.6*e.value
 CFL = 0.99
 sigma_x = a/3
-N_layer = 110
+N_layer = 150
 x0 = N_layer*dx+2*sigma_x
 xr = 2*a+2*b+48e-9+dx
 
@@ -21,13 +21,13 @@ n = 0
 
 m_eff = 0.023*m_e.value
 dt=CFL*2/(2*hbar.value/m_eff*(1/dx**2)+1/hbar.value*U0)
-E = 0.5*e.value
+E = 0.3*e.value
 print(f'Energy: {E/e.value} eV')
 kx = np.sqrt(2*m_eff*E/hbar.value**2)
 alpha = 3.0
 sigma = alpha * hbar.value / (dt * N_layer)
 k = 4 # exponent for the absorbing boundary strength
-t_max = 20*Lx*np.sqrt(m_eff/2/E)
+t_max = 100*Lx*np.sqrt(m_eff/2/E)
 # dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
 dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
 
