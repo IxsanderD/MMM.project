@@ -148,12 +148,12 @@ print(f't_max: {t_max}')
 
 # order = 2
 # dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-# E2,T2 = Transmission(order,dt,m,n)
+# E2,T2 = numeric_T(order,dt,m,n)
 # plt.plot(E2,T2,label='Numerical 2nd order')
 
 # order = 4
 # dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-# E4,T4 = Transmission(order,dt,m,n)
+# E4,T4 = numeric_T(order,dt,m,n)
 # plt.plot(E4,T4,label='Numerical 4th order')
 
 # plt.xlabel('Energy [eV]')
@@ -236,7 +236,7 @@ print(f't_max: {t_max}')
 # solver.add_recorder(xr)
 # order = 4
 # dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-# E4,T4 = Transmission(order,dt,m,n)
+# E4,T4 = numeric_T(order,dt,m,n)
 # plt.plot(E4,T4,label='Numerical 4th order')
 # plt.xlabel('Energy [eV]')
 # plt.ylabel('Transmission')
@@ -247,7 +247,7 @@ print(f't_max: {t_max}')
 # IV curve:
 ###
 
-def Transmission(order,dt,m,n,V0=0):
+def numeric_T(order,dt,m,n,V0=0):
     solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
     solver.add_barriers(U0)
     solver.add_potential(V0)
@@ -292,7 +292,7 @@ for Vdc in Vdc_values:
     m = 0
     n = 0
     I = 0
-    E, T = Transmission(order,dt,m,n,Vdc)
+    E, T = numeric_T(order,dt,m,n,Vdc)
     plt.plot(E,T,label=f'Vdc={Vdc/e.value:.2f} eV')
     for n in range(1,10):
         for m in range(1,10):
