@@ -302,16 +302,6 @@ plt.show()
 # plt.ylabel('Transmission')
 # plt.legend()
 
-<<<<<<< HEAD
-# plt.figure(2)
-# plt.plot(Vdc_values,I_values)
-# plt.xlabel('Voltage [V]')
-# plt.ylabel('Current [A]')
-# plt.show()
-=======
-    T_num = np.abs(J_bar[mask]/J_free[mask])
-    return E_num[mask]/e.value,T_num
-
 def IV(Vdc,E,T,mu_l=22.436e-3*e.value,Te=0):
     El = mu_l - 6*k_B.value*Te - Vdc
     Er = mu_l + 6*k_B.value*Te
@@ -354,4 +344,3 @@ plt.plot(Vdc_values,I_values)
 plt.xlabel('Voltage [V]')
 plt.ylabel('Current [A]')
 plt.show()
->>>>>>> 7911f294f8f70839993ab30608a4c58068699d36
