@@ -222,11 +222,10 @@ class RTD:
     
     def psi_freq(self, psi_Re, psi_Im, eta=None):
         N = len(psi_Re)
-        t = np.arange(N) * self.dt
-        E = np.fft.rfftfreq(N, d=self.dt) * 2*np.pi*self.hbar
-        psi_freq_Re = np.fft.rfft(psi_Re)*self.dt
-        psi_freq_Im = np.fft.rfft(psi_Im)*self.dt
-        return E-self.E, psi_freq_Re, psi_freq_Im
+        E = np.fft.fftfreq(N, d=self.dt)
+        psi_Re_freq=np.real(np.fft.fft(np.array(psi_Re)))
+        psi_Im_freq=np.real(np.fft.fft(np.array(psi_Im)))
+        return np.concatenate((E[:(len(E)+1)//2],E[(len(E)+1)//2:]+1/self.dt))*2*np.pi*self.hbar-self.E, psi_Re_freq, psi_Im_freq
     
     def J_time(self):
         N = 1e26/(self.Ly*self.Lz)
@@ -238,12 +237,13 @@ class RTD:
         t = np.arange(len(J))*self.dt
         return t, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
     
-    def J_freq(self,t,J_time): # To be continued
+    def J_freq(self): # To be continued
         N = 1e26/(self.Ly*self.Lz)
-        E, psi_Re_freq_left, psi_Im_freq_left = self.psi_freq(self.psiRe_record_left,self.psiIm_record_left)
-        _, psi_Re_freq_right, psi_Im_freq_right = self.psi_freq(self.psiRe_record_right,self.psiIm_record_right)
-        J = psi_Re_freq_left*psi_Im_freq_right-psi_Im_freq_left*psi_Re_freq_right
-        return E, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
+        E, psi_Re_freq, psi_Im_freq = self.psi_freq(self.psiRe_record_left,self.psiIm_record_left)
+        diff_psi_Re = (np.array(self.psiRe_record_right)-np.array(self.psiRe_record_left))/self.dx
+        diff_psi_Im = (np.array(self.psiIm_record_right)-np.array(self.psiIm_record_left))/self.dx
+        _, diff_psi_Re_freq, diff_psi_Im_freq = self.psi_freq(diff_psi_Re,diff_psi_Im)
+        return E, self.hbar/self.m*(psi_Re_freq*diff_psi_Im_freq-psi_Im_freq*diff_psi_Re_freq)
     
     def IV(self,E,T,mu_l=22.436e-3*e.value,Te=0):
         El = mu_l - e.value*self.Vdc - 6*k_B.value*Te
