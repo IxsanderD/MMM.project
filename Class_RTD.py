@@ -8,10 +8,6 @@ class RTD:
     def __init__(self,dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order,CFL=0.99,ABC=True):
         self.dx = dx
         self.dt = dt
-        # if order == 2:
-        #     self.dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2))
-        # elif order == 4:
-        #     self.dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2))
         self.CFL = CFL
         self.a = a
         self.b = b
@@ -23,6 +19,8 @@ class RTD:
         self.sigma_x = sigma_x
         self.kx = kx
         self.order = order
+        self.m_en = m
+        self.n_en = n
         self.E = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
         print(f'Energy(n,m): {self.E/e.value} eV')
         self.Nx = int(self.Lx//self.dx)
@@ -31,12 +29,16 @@ class RTD:
         self.psi_Re = np.zeros(self.Nx)
         self.psi_Im = np.zeros(self.Nx)
         self.U = np.zeros(self.Nx)
+        self.Vdc = 0
+        self.xr = 0
         self.n = 0
         self.m = 0.023*m_e.value
         self.hbar = hbar.value
         # Absorbing Boundaries:
         self.U_Im = np.zeros(self.Nx)
         self.N_layer=N_layer
+        self.k = k
+        self.sigma = sigma
         if ABC:
             self.U_Im[:N_layer] += np.array([sigma*(i/N_layer)**k for i in range(N_layer-1,-1,-1)])
             self.U_Im[-N_layer:] += np.array([sigma*(i/N_layer)**k for i in range(N_layer)])
@@ -55,19 +57,11 @@ class RTD:
         self.U[int((self.a+48e-9)//self.dx):int((self.a+self.b+48e-9)//self.dx)] = U0
         self.U[int((2*self.a+self.b+48e-9)//self.dx):int((2*self.a+2*self.b+48e-9)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
-        # if self.order == 2:
-        #     self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+U0/hbar.value)
-        # elif self.order == 4:
-        #     self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+U0/hbar.value)
         
     def add_potential(self,V0):
         self.U[:int((self.a+48e-9)//self.dx)]  = V0*np.ones(int((self.a+48e-9)//self.dx))
         self.U[int((self.a+48e-9)//self.dx):int((2*self.a+2*self.b+48e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
         self.Vdc=V0
-        # if self.order == 2:
-        #     self.dt = self.CFL*2/(2*hbar.value/(0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
-        # elif self.order == 4:
-        #     self.dt = self.CFL*2/(8*hbar.value/(3*0.023*m_e.value*self.dx**2)+np.max(self.U)/hbar.value)
         
     def plot_potential(self):
         plt.plot(np.arange(self.Nx)*self.dx*1e9,self.U/e.value,label='Re')
@@ -222,28 +216,41 @@ class RTD:
     
     def psi_freq(self, psi_Re, psi_Im, eta=None):
         N = len(psi_Re)
-        t = np.arange(N) * self.dt
-        E = np.fft.rfftfreq(N, d=self.dt) * 2*np.pi*self.hbar
-        psi_freq_Re = np.fft.rfft(psi_Re)*self.dt
-        psi_freq_Im = np.fft.rfft(psi_Im)*self.dt
-        return E-self.E, psi_freq_Re, psi_freq_Im
+        E = np.fft.fftfreq(N, d=self.dt)
+        psi_Re_freq=np.real(np.fft.fft(np.array(psi_Re)))
+        psi_Im_freq=np.real(np.fft.fft(np.array(psi_Im)))
+        return np.concatenate((E[:(len(E)+1)//2],E[(len(E)+1)//2:]+1/self.dt))*2*np.pi*self.hbar-self.E, psi_Re_freq, psi_Im_freq
     
     def J_time(self):
-        N = 1e26/(self.Ly*self.Lz)
         Re_left = np.array(self.psiRe_record_left)
         Im_left = np.array(self.psiIm_record_left)
         Re_right = np.array(self.psiRe_record_right)
         Im_right = np.array(self.psiIm_record_right)
         J = Re_left*Im_right - Im_left*Re_right
         t = np.arange(len(J))*self.dt
-        return t, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
+        return t, self.hbar/(self.m*self.dx)*np.array(J)
     
-    def J_freq(self,t,J_time): # To be continued
-        N = 1e26/(self.Ly*self.Lz)
-        E, psi_Re_freq_left, psi_Im_freq_left = self.psi_freq(self.psiRe_record_left,self.psiIm_record_left)
-        _, psi_Re_freq_right, psi_Im_freq_right = self.psi_freq(self.psiRe_record_right,self.psiIm_record_right)
-        J = psi_Re_freq_left*psi_Im_freq_right-psi_Im_freq_left*psi_Re_freq_right
-        return E, N*e.value*self.hbar/(self.m*self.dx)*np.array(J)
+    def J_freq(self):
+        E, psi_Re_freq, psi_Im_freq = self.psi_freq(self.psiRe_record_left,self.psiIm_record_left)
+        diff_psi_Re = (np.array(self.psiRe_record_right)-np.array(self.psiRe_record_left))/self.dx
+        diff_psi_Im = (np.array(self.psiIm_record_right)-np.array(self.psiIm_record_left))/self.dx
+        _, diff_psi_Re_freq, diff_psi_Im_freq = self.psi_freq(diff_psi_Re,diff_psi_Im)
+        return E, self.hbar/self.m*(psi_Re_freq*diff_psi_Im_freq-psi_Im_freq*diff_psi_Re_freq)
+    
+    def Transmission(self,E_max=0.9):
+        E_num, J_bar = self.J_freq()
+
+        free = RTD(self.dx,self.dt,self.a,self.b,self.Ly,self.Lz,self.t_max,self.x0,self.sigma_x,self.kx,self.sigma,self.k,self.N_layer,self.m_en,self.n_en,order=self.order,ABC=True)
+        free.add_potential(self.Vdc)
+        free.add_recorder(self.xr)
+
+        free.update_loop()
+        # free.show_recorder()
+        E_num, J_free = free.J_freq()
+        mask=E_num/e.value<E_max
+
+        T_num = np.abs(J_bar[mask]/J_free[mask])
+        return E_num[mask]/e.value,T_num
     
     def IV(self,E,T,mu_l=22.436e-3*e.value,Te=0):
         El = mu_l - e.value*self.Vdc - 6*k_B.value*Te
