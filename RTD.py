@@ -237,7 +237,7 @@ for Vdc in Vdc_values:
     n = 0
     I = 0
     E, T = numeric_T(order,dt,m,n,Vdc)
-    plt.plot(E,T,label=f'Vdc={Vdc/e.value:.2f} eV')
+    plt.plot(E/e.value,T,label=f'Vdc={Vdc/e.value:.2f} eV')
     for n in range(1,10):
         for m in range(1,10):
             E_nm = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
