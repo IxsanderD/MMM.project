@@ -22,7 +22,6 @@ class RTD:
         self.m_en = m
         self.n_en = n
         self.E = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
-        print(f'Energy(n,m): {self.E/e.value} eV')
         self.Nx = int(self.Lx//self.dx)
         self.Nt = int(self.t_max//self.dt)
         self.C = 1/np.sqrt(np.sqrt(2*np.pi)*self.sigma_x)
