@@ -27,7 +27,7 @@ kx = np.sqrt(2*m_eff*E/hbar.value**2)
 alpha = 3.0
 sigma = alpha * hbar.value / (dt * N_layer)
 k = 4 # exponent for the absorbing boundary strength
-t_max = 20*Lx*np.sqrt(m_eff/2/E)
+t_max = 100*Lx*np.sqrt(m_eff/2/E)
 # dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
 dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
 
@@ -96,27 +96,27 @@ print(f't_max: {t_max}')
 # Validation with analytical solution:
 ###
 
-def Transmission(order,dt,V0=0):
-    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-    solver.add_barriers(U0)
-    solver.add_potential(V0)
-    solver.add_recorder(xr)
+# def Transmission(order,dt,V0=0):
+#     solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+#     solver.add_barriers(U0)
+#     solver.add_potential(V0)
+#     solver.add_recorder(xr)
 
-    solver.update_loop()
-    # solver.show_recorder()
-    E_num, J_bar = solver.J_freq()
+#     solver.update_loop()
+#     # solver.show_recorder()
+#     E_num, J_bar = solver.J_freq()
 
-    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-    solver.add_potential(V0)
-    solver.add_recorder(xr)
+#     solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+#     solver.add_potential(V0)
+#     solver.add_recorder(xr)
 
-    solver.update_loop()
-    # solver.show_recorder()
-    E_num, J_free = solver.J_freq()
-    mask=E_num/e.value<0.9
+#     solver.update_loop()
+#     # solver.show_recorder()
+#     E_num, J_free = solver.J_freq()
+#     mask=E_num/e.value<0.9
 
-    T_num = np.abs(J_bar[mask]/J_free[mask])
-    return E_num[mask]/e.value,T_num
+#     T_num = np.abs(J_bar[mask]/J_free[mask])
+#     return E_num[mask]/e.value,T_num
 
 ### Analytical solution:
 
@@ -132,12 +132,20 @@ plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
 
 order = 2
 dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-E2,T2 = Transmission(order,dt)
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+solver.add_barriers(U0)
+solver.add_recorder(xr)
+solver.update_loop()
+E2,T2 = solver.Transmission()
 plt.plot(E2,T2,label='Numerical 2nd order')
 
 order = 4
 dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-E4,T4 = Transmission(order,dt)
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+solver.add_barriers(U0)
+solver.add_recorder(xr)
+solver.update_loop()
+E4,T4 = solver.Transmission()
 plt.plot(E4,T4,label='Numerical 4th order')
 
 plt.xlabel('Energy [eV]')

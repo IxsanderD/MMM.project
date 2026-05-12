@@ -23,6 +23,8 @@ class RTD:
         self.sigma_x = sigma_x
         self.kx = kx
         self.order = order
+        self.m_en = m
+        self.n_en = n
         self.E = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
         print(f'Energy(n,m): {self.E/e.value} eV')
         self.Nx = int(self.Lx//self.dx)
@@ -31,12 +33,16 @@ class RTD:
         self.psi_Re = np.zeros(self.Nx)
         self.psi_Im = np.zeros(self.Nx)
         self.U = np.zeros(self.Nx)
+        self.Vdc = 0
+        self.xr = 0
         self.n = 0
         self.m = 0.023*m_e.value
         self.hbar = hbar.value
         # Absorbing Boundaries:
         self.U_Im = np.zeros(self.Nx)
         self.N_layer=N_layer
+        self.k = k
+        self.sigma = sigma
         if ABC:
             self.U_Im[:N_layer] += np.array([sigma*(i/N_layer)**k for i in range(N_layer-1,-1,-1)])
             self.U_Im[-N_layer:] += np.array([sigma*(i/N_layer)**k for i in range(N_layer)])
@@ -244,6 +250,21 @@ class RTD:
         diff_psi_Im = (np.array(self.psiIm_record_right)-np.array(self.psiIm_record_left))/self.dx
         _, diff_psi_Re_freq, diff_psi_Im_freq = self.psi_freq(diff_psi_Re,diff_psi_Im)
         return E, self.hbar/self.m*(psi_Re_freq*diff_psi_Im_freq-psi_Im_freq*diff_psi_Re_freq)
+    
+    def Transmission(self):
+        E_num, J_bar = self.J_freq()
+
+        free = RTD(self.dx,self.dt,self.a,self.b,self.Ly,self.Lz,self.t_max,self.x0,self.sigma_x,self.kx,self.sigma,self.k,self.N_layer,self.m_en,self.n_en,order=self.order,ABC=True)
+        free.add_potential(self.Vdc)
+        free.add_recorder(self.xr)
+
+        free.update_loop()
+        # free.show_recorder()
+        E_num, J_free = free.J_freq()
+        mask=E_num/e.value<0.9
+
+        T_num = np.abs(J_bar[mask]/J_free[mask])
+        return E_num[mask]/e.value,T_num
     
     def IV(self,E,T,mu_l=22.436e-3*e.value,Te=0):
         El = mu_l - e.value*self.Vdc - 6*k_B.value*Te
