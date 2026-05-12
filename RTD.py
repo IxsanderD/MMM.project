@@ -6,35 +6,35 @@ from astropy.constants.astropyconst20 import m_e,hbar,e,k_B,h
 # In this file, we will peform all of our experiments. We start by looking at some animations and plots of our potentials to get our first
 # visual check of the code's validity. We do this by defining the parameters of our class.
 
-a = 15e-9
-b = 5e-9
-Lx = (3*a+2*b+108e-9) # Extra space for barrier to not have an influence
-Ly = 40e-9
-Lz = Ly
-dx = Lx/1500
-U0 = 0.6*e.value
-CFL = 0.99
-sigma_x = a/3
-N_layer = 200
-x0 = N_layer*dx+2*sigma_x
-xr = 2*a+2*b+48e-9+dx
+# a = 15e-9
+# b = 5e-9
+# Lx = (3*a+2*b+108e-9) # Extra space for barrier to not have an influence
+# Ly = 40e-9
+# Lz = Ly
+# dx = Lx/1000
+# U0 = 0.6*e.value
+# CFL = 0.99
+# sigma_x = a/3
+# N_layer = 160
+# x0 = N_layer*dx+2*sigma_x
+# xr = 2*a+2*b+48e-9+dx
 
-m = 0
-n = 0
+# m = 0
+# n = 0
 
-m_eff = 0.023*m_e.value
-dt=CFL*2/(2*hbar.value/m_eff*(1/dx**2)+1/hbar.value*U0)
-E = 0.3*e.value
-print(f'Energy: {E/e.value} eV')
-kx = np.sqrt(2*m_eff*E/hbar.value**2)
-alpha = 1.0
-sigma = alpha * hbar.value / (dt * N_layer)
-k = 4 # exponent for the absorbing boundary strength
-t_max = 10*Lx*np.sqrt(m_eff/2/E)
-# dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
+# m_eff = 0.023*m_e.value
+# dt=CFL*2/(2*hbar.value/m_eff*(1/dx**2)+1/hbar.value*U0)
+# E = 0.3*e.value
+# print(f'Energy: {E/e.value} eV')
+# kx = np.sqrt(2*m_eff*E/hbar.value**2)
+# alpha = 3.0
+# sigma = alpha * hbar.value / (dt * N_layer)
+# k = 4 # exponent for the absorbing boundary strength
+# t_max = 10*Lx*np.sqrt(m_eff/2/E)
+# # dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
+# dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
 
-print(f't_max: {t_max}')
+# print(f't_max: {t_max}')
 
 # Now, we make some aniamtions and plots:
 
@@ -53,7 +53,7 @@ print(f't_max: {t_max}')
 # solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,CFL=CFL,order=4,ABC=True)
 # solver.add_recorder(xr)
 
-# solver.animate(speed=500)
+# solver.animate(speed=200)
 # solver.restart()
 
 # solver.update_loop()
@@ -105,11 +105,11 @@ b = 5e-9
 Lx = (3*a+2*b+108e-9) # Extra space for barrier to not have an influence
 Ly = 40e-9
 Lz = Ly
-dx = Lx/1500
+dx = Lx/900
 U0 = 0.6*e.value
-CFL = 0.99
+CFL = 1.00
 sigma_x = a/3
-N_layer = 200
+N_layer = 150
 x0 = N_layer*dx+2*sigma_x
 xr = 2*a+2*b+48e-9+dx
 
@@ -121,14 +121,32 @@ dt=CFL*2/(2*hbar.value/m_eff*(1/dx**2)+1/hbar.value*U0)
 E = 0.3*e.value
 print(f'Energy: {E/e.value} eV')
 kx = np.sqrt(2*m_eff*E/hbar.value**2)
-alpha = 1.0
+alpha = 3.0
 sigma = alpha * hbar.value / (dt * N_layer)
 k = 4 # exponent for the absorbing boundary strength
-t_max = 20*Lx*np.sqrt(m_eff/2/E)
-# dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
+t_max = 50*Lx*np.sqrt(m_eff/2/E)
 
 print(f't_max: {t_max}')
+
+def numeric_T(order,dt,m,n,V0=0):
+    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+    solver.add_barriers(U0)
+    solver.add_potential(V0)
+    solver.add_recorder(xr)
+
+    solver.update_loop()
+    E_num, J_bar = solver.J_freq()
+
+    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+    solver.add_potential(V0)
+    solver.add_recorder(xr)
+
+    solver.update_loop()
+    E_num, J_free = solver.J_freq()
+    mask=E_num/e.value<0.9
+
+    T_num = np.abs(J_bar[mask]/J_free[mask])
+    return E_num[mask]/e.value,T_num
 
 ###
 # Validation with analytical solution:
@@ -136,34 +154,34 @@ print(f't_max: {t_max}')
 
 ### Analytical solution:
 
-# order = 2
-# dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-# solver.add_barriers(U0)
-# solver.add_recorder(xr)
-# E_ana,T_ana = solver.analytical_T()
-# plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
+order = 2
+dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
+solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+solver.add_barriers(U0)
+solver.add_recorder(xr)
+E_ana,T_ana = solver.analytical_T()
+plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
 
-## Numerical solutions:
+### Numerical solutions:
 
 # order = 2
 # dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
 # E2,T2 = numeric_T(order,dt,m,n)
-# plt.plot(E2,T2,label='Numerical 2nd order')
+# plt.plot(E2,T2,'x',label='Numerical 2nd order')
 
-# order = 4
-# dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-# E4,T4 = numeric_T(order,dt,m,n)
-# plt.plot(E4,T4,label='Numerical 4th order')
+order = 4
+dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
+E4,T4 = numeric_T(order,dt,m,n)
+plt.plot(E4,T4,'o',label='Numerical 4th order')
 
-# plt.xlabel('Energy [eV]')
-# plt.ylabel('Transmission')
-# plt.legend()
-# plt.show()
+plt.xlabel('Energy [eV]')
+plt.ylabel('Transmission')
+plt.legend()
+plt.show()
 
 # We can even go a step further and compare both orders:
 
-# Comparison of orders:
+### Comparison of orders:
 
 # solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
 # solver.add_barriers(U0)
@@ -247,65 +265,45 @@ print(f't_max: {t_max}')
 # IV curve:
 ###
 
-def numeric_T(order,dt,m,n,V0=0):
-    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-    solver.add_barriers(U0)
-    solver.add_potential(V0)
-    solver.add_recorder(xr)
+# def IV(Vdc,E,T,mu_l=22.436e-3*e.value,Te=0):
+#     El = mu_l - 6*k_B.value*Te - Vdc
+#     Er = mu_l + 6*k_B.value*Te
+#     print(El/e.value,Er/e.value)
+#     mask = (El<E)&(Er>E)
+#     if Te==0:
+#         I = 2*e.value/h.value*np.trapezoid(T[mask],E[mask],dx=E[1]-E[0])
+#         return I
+#     else:
+#         f_L = 1/(np.exp((E-mu_l)/k_B.value/Te)+1)
+#         f_R = 1/(np.exp((E-mu_l+e.value*Vdc)/k_B.value/Te)+1)
+#         I = 2*e.value/h.value*np.trapezoid(T[mask]*(f_L[mask]-f_R[mask]),E[mask],dx=E[1]-E[0])
+#         return I
 
-    solver.update_loop()
-    E_num, J_bar = solver.J_freq()
+# Te = 0
+# order = 4
+# dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
+# Vdc_values = np.array([0,0.05])*e.value
+# I_values = []
 
-    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-    solver.add_potential(V0)
-    solver.add_recorder(xr)
+# plt.figure(1)
+# for Vdc in Vdc_values:
+#     m = 0
+#     n = 0
+#     I = 0
+#     E, T = numeric_T(order,dt,m,n,Vdc)
+#     plt.plot(E,T,label=f'Vdc={Vdc/e.value:.2f} eV')
+#     for n in range(1,10):
+#         for m in range(1,10):
+#             E_nm = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
+#             I += IV(Vdc,E+E_nm,T,Te=Te)
+#     I_values.append(I)
 
-    solver.update_loop()
-    E_num, J_free = solver.J_freq()
-    mask=E_num/e.value<0.9
+# plt.xlabel('Energy [eV]')
+# plt.ylabel('Transmission')
+# plt.legend()
 
-    T_num = np.abs(J_bar[mask]/J_free[mask])
-    return E_num[mask]/e.value,T_num
-
-def IV(Vdc,E,T,mu_l=22.436e-3*e.value,Te=0):
-    El = mu_l - 6*k_B.value*Te - Vdc
-    Er = mu_l + 6*k_B.value*Te
-    print(El/e.value,Er/e.value)
-    mask = (El<E)&(Er>E)
-    if Te==0:
-        I = 2*e.value/h.value*np.trapezoid(T[mask],E[mask],dx=E[1]-E[0])
-        return I
-    else:
-        f_L = 1/(np.exp((E-mu_l)/k_B.value/Te)+1)
-        f_R = 1/(np.exp((E-mu_l+e.value*Vdc)/k_B.value/Te)+1)
-        I = 2*e.value/h.value*np.trapezoid(T[mask]*(f_L[mask]-f_R[mask]),E[mask],dx=E[1]-E[0])
-        return I
-
-Te = 0
-order = 4
-dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-Vdc_values = np.array([0,0.05])*e.value
-I_values = []
-
-plt.figure(1)
-for Vdc in Vdc_values:
-    m = 0
-    n = 0
-    I = 0
-    E, T = numeric_T(order,dt,m,n,Vdc)
-    plt.plot(E,T,label=f'Vdc={Vdc/e.value:.2f} eV')
-    for n in range(1,10):
-        for m in range(1,10):
-            E_nm = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
-            I += IV(Vdc,E+E_nm,T,Te=Te)
-    I_values.append(I)
-
-plt.xlabel('Energy [eV]')
-plt.ylabel('Transmission')
-plt.legend()
-
-plt.figure(2)
-plt.plot(Vdc_values,I_values)
-plt.xlabel('Voltage [V]')
-plt.ylabel('Current [A]')
-plt.show()
+# plt.figure(2)
+# plt.plot(Vdc_values,I_values)
+# plt.xlabel('Voltage [V]')
+# plt.ylabel('Current [A]')
+# plt.show()
