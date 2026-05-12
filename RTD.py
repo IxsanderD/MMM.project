@@ -277,7 +277,7 @@ def IV(Vdc,E,T,mu_l=22.436e-3*e.value,Te=0):
         return I
     else:
         f_L = 1/(np.exp((E-mu_l)/k_B.value/Te)+1)
-        f_R = 1/(np.exp((E-mu_l+e.value*Vdc)/k_B.value/Te)+1)
+        f_R = 1/(np.exp((E-mu_l+Vdc)/k_B.value/Te)+1)
         I = 2*e.value/h.value*np.trapezoid(T[mask]*(f_L[mask]-f_R[mask]),E[mask],dx=E[1]-E[0])
         return I
 
