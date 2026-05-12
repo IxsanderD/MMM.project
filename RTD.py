@@ -96,54 +96,52 @@ print(f't_max: {t_max}')
 # Validation with analytical solution:
 ###
 
-def Transmission(order,dt,V0=0):
+def Transmission(order,dt,m,n,V0=0):
     solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
     solver.add_barriers(U0)
     solver.add_potential(V0)
     solver.add_recorder(xr)
 
     solver.update_loop()
-    # solver.show_recorder()
     E_num, J_bar = solver.J_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
 
     solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-    solver.add_potential(V0)
+    # solver.add_potential(V0)
     solver.add_recorder(xr)
 
     solver.update_loop()
-    # solver.show_recorder()
     E_num, J_free = solver.J_freq(np.array(solver.psiRe_record_left),np.array(solver.psiIm_record_left))
+    
     mask=E_num/e.value<0.9
-
     T_num = np.abs(J_bar[mask]/J_free[mask])
     return E_num[mask]/e.value,T_num
 
 ### Analytical solution:
 
-order = 2
-dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-solver.add_barriers(U0)
-solver.add_recorder(xr)
-E_ana,T_ana = solver.analytical_T()
-plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
+# order = 2
+# dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
+# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+# solver.add_barriers(U0)
+# solver.add_recorder(xr)
+# E_ana,T_ana = solver.analytical_T()
+# plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
 
 ## Numerical solutions:
 
-order = 2
-dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-E2,T2 = Transmission(order,dt)
-plt.plot(E2,T2,label='Numerical 2nd order')
+# order = 2
+# dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
+# E2,T2 = Transmission(order,dt,m,n)
+# plt.plot(E2,T2,label='Numerical 2nd order')
 
-order = 4
-dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-E4,T4 = Transmission(order,dt)
-plt.plot(E4,T4,label='Numerical 4th order')
+# order = 4
+# dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
+# E4,T4 = Transmission(order,dt,m,n)
+# plt.plot(E4,T4,label='Numerical 4th order')
 
-plt.xlabel('Energy [eV]')
-plt.ylabel('Transmission')
-plt.legend()
-plt.show()
+# plt.xlabel('Energy [eV]')
+# plt.ylabel('Transmission')
+# plt.legend()
+# plt.show()
 
 # ##
 # With potential V0
@@ -168,7 +166,7 @@ plt.show()
 # solver.add_recorder(xr)
 # order = 4
 # dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-# E4,T4 = Transmission(order,dt)
+# E4,T4 = Transmission(order,dt,m,n)
 # plt.plot(E4,T4,label='Numerical 4th order')
 # plt.xlabel('Energy [eV]')
 # plt.ylabel('Transmission')
@@ -196,42 +194,45 @@ plt.show()
 # IV curve:
 ###
 
-# V_start = -0.1
-# V_end = 0.1
-# V_points = 10
-# n_max = 1
-# m_max = 1
-# Te = 0
+def IV(Vdc,E,T,mu_l=22.436e-3*e.value,Te=0):
+    El = mu_l - 6*k_B.value*Te - Vdc
+    Er = mu_l + 6*k_B.value*Te
+    print(El/e.value,Er/e.value) # THE SAME!!!???
+    mask = (El<E)&(Er>E)
+    if Te==0:
+        I = 2*e.value/h.value*np.trapezoid(T[mask],E[mask],dx=E[1]-E[0])
+        return I
+    else:
+        f_L = 1/(np.exp((E-mu_l)/k_B.value/Te)+1)
+        f_R = 1/(np.exp((E-mu_l+e.value*Vdc)/k_B.value/Te)+1)
+        I = 2*e.value/h.value*np.trapezoid(T[mask]*(f_L[mask]-f_R[mask]),E[mask],dx=E[1]-E[0])
+        return I
 
-# n,m = 1,1
-# order = 4
-# dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-# Vdc_values = np.linspace(V_start,V_end,V_points)
-# I_values = []
+Te = 0
+order = 4
+dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
+Vdc_values = np.array([0,0.05,0.1])*e.value
+I_values = []
 
-# def IV(Vdc,E,T,mu_l=22.436e-3*e.value,Te=0):
-#     El = mu_l - e.value*Vdc - 6*k_B.value*Te
-#     Er = mu_l + 6*k_B.value*Te
-#     mask = (El<E)&(Er>E)
-#     if Te==0:
-#         I = 2*e.value/h.value*np.trapezoid(T[mask],E[mask],dx=E[1]-E[0])
-#         return I
-#     else:
-#         f_L = 1/(np.exp((E-mu_l)/k_B.value/Te)+1)
-#         f_R = 1/(np.exp((E-mu_l+e.value*Vdc)/k_B.value/Te)+1)
-#         I = 2*e.value/h.value*np.trapezoid(T[mask]*(f_L[mask]-f_R[mask]),E[mask],dx=E[1]-E[0])
-#         return I
+plt.figure(1)
+for Vdc in Vdc_values:
+    m = 1
+    n = 1
+    I = 0
+    E, T = Transmission(order,dt,m,n,Vdc)
+    plt.plot(E,T,label=f'Vdc={Vdc/e.value:.2f} eV')
+    for n in range(1,10):
+        for m in range(1,10):
+            E_nm = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
+            I += IV(Vdc,E+E_nm,T,Te=Te)
+    I_values.append(I)
 
-# for Vdc in Vdc_values:
-#     I = 0
-#     E, T = Transmission(order,dt,Vdc*e.value)
-#     for ns in range(1,n_max+1):
-#         for ms in range(1,m_max+1):
-#             E_nm = hbar.value**2/(2*0.023*m_e.value)*((np.pi*ns/Ly)**2+(np.pi*ms/Lz)**2)
-#             I += IV(Vdc,E+E_nm,T,Te=Te)
-#     I_values.append(I)
+plt.xlabel('Energy [eV]')
+plt.ylabel('Transmission')
+plt.legend()
 
-# plt.plot(Vdc_values,I_values)
-# plt.xlabel('Voltage [V]')
-# plt.ylabel('Current [A]')
-# plt.show()
+plt.figure(2)
+plt.plot(Vdc_values,I_values)
+plt.xlabel('Voltage [V]')
+plt.ylabel('Current [A]')
+plt.show()
