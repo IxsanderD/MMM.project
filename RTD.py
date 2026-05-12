@@ -146,7 +146,7 @@ def numeric_T(order,dt,m,n,V0=0):
     mask=E_num/e.value<0.9
 
     T_num = np.abs(J_bar[mask]/J_free[mask])
-    return E_num[mask]/e.value,T_num
+    return E_num[mask],T_num
 
 ###
 # Validation with analytical solution:
@@ -264,43 +264,6 @@ plt.show()
 ###
 # IV curve:
 ###
-
-# def IV(Vdc,E,T,mu_l=22.436e-3*e.value,Te=0):
-#     El = mu_l - 6*k_B.value*Te - Vdc
-#     Er = mu_l + 6*k_B.value*Te
-#     print(El/e.value,Er/e.value)
-#     mask = (El<E)&(Er>E)
-#     if Te==0:
-#         I = 2*e.value/h.value*np.trapezoid(T[mask],E[mask],dx=E[1]-E[0])
-#         return I
-#     else:
-#         f_L = 1/(np.exp((E-mu_l)/k_B.value/Te)+1)
-#         f_R = 1/(np.exp((E-mu_l+e.value*Vdc)/k_B.value/Te)+1)
-#         I = 2*e.value/h.value*np.trapezoid(T[mask]*(f_L[mask]-f_R[mask]),E[mask],dx=E[1]-E[0])
-#         return I
-
-# Te = 0
-# order = 4
-# dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-# Vdc_values = np.array([0,0.05])*e.value
-# I_values = []
-
-# plt.figure(1)
-# for Vdc in Vdc_values:
-#     m = 0
-#     n = 0
-#     I = 0
-#     E, T = numeric_T(order,dt,m,n,Vdc)
-#     plt.plot(E,T,label=f'Vdc={Vdc/e.value:.2f} eV')
-#     for n in range(1,10):
-#         for m in range(1,10):
-#             E_nm = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
-#             I += IV(Vdc,E+E_nm,T,Te=Te)
-#     I_values.append(I)
-
-# plt.xlabel('Energy [eV]')
-# plt.ylabel('Transmission')
-# plt.legend()
 
 def IV(Vdc,E,T,mu_l=22.436e-3*e.value,Te=0):
     El = mu_l - 6*k_B.value*Te - Vdc
