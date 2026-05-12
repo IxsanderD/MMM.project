@@ -124,7 +124,7 @@ kx = np.sqrt(2*m_eff*E/hbar.value**2)
 alpha = 1.0
 sigma = alpha * hbar.value / (dt * N_layer)
 k = 4 # exponent for the absorbing boundary strength
-t_max = 50*Lx*np.sqrt(m_eff/2/E)
+t_max = 20*Lx*np.sqrt(m_eff/2/E)
 # dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
 dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
 
@@ -247,10 +247,30 @@ print(f't_max: {t_max}')
 # IV curve:
 ###
 
+def Transmission(order,dt,m,n,V0=0):
+    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+    solver.add_barriers(U0)
+    solver.add_potential(V0)
+    solver.add_recorder(xr)
+
+    solver.update_loop()
+    E_num, J_bar = solver.J_freq()
+
+    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+    solver.add_potential(V0)
+    solver.add_recorder(xr)
+
+    solver.update_loop()
+    E_num, J_free = solver.J_freq()
+    mask=E_num/e.value<0.9
+
+    T_num = np.abs(J_bar[mask]/J_free[mask])
+    return E_num[mask]/e.value,T_num
+
 def IV(Vdc,E,T,mu_l=22.436e-3*e.value,Te=0):
     El = mu_l - 6*k_B.value*Te - Vdc
     Er = mu_l + 6*k_B.value*Te
-    print(El/e.value,Er/e.value) # THE SAME!!!???
+    print(El/e.value,Er/e.value)
     mask = (El<E)&(Er>E)
     if Te==0:
         I = 2*e.value/h.value*np.trapezoid(T[mask],E[mask],dx=E[1]-E[0])
@@ -264,13 +284,13 @@ def IV(Vdc,E,T,mu_l=22.436e-3*e.value,Te=0):
 Te = 0
 order = 4
 dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-Vdc_values = np.array([0,0.05,0.1])*e.value
+Vdc_values = np.array([0,0.05])*e.value
 I_values = []
 
 plt.figure(1)
 for Vdc in Vdc_values:
-    m = 1
-    n = 1
+    m = 0
+    n = 0
     I = 0
     E, T = Transmission(order,dt,m,n,Vdc)
     plt.plot(E,T,label=f'Vdc={Vdc/e.value:.2f} eV')

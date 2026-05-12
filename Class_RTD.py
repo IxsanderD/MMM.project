@@ -236,31 +236,3 @@ class RTD:
         diff_psi_Im = (np.array(self.psiIm_record_right)-np.array(self.psiIm_record_left))/self.dx
         _, diff_psi_Re_freq, diff_psi_Im_freq = self.psi_freq(diff_psi_Re,diff_psi_Im)
         return E, self.hbar/self.m*(psi_Re_freq*diff_psi_Im_freq-psi_Im_freq*diff_psi_Re_freq)
-    
-    def Transmission(self,E_max=0.9):
-        E_num, J_bar = self.J_freq()
-
-        free = RTD(self.dx,self.dt,self.a,self.b,self.Ly,self.Lz,self.t_max,self.x0,self.sigma_x,self.kx,self.sigma,self.k,self.N_layer,self.m_en,self.n_en,order=self.order,ABC=True)
-        free.add_potential(self.Vdc)
-        free.add_recorder(self.xr)
-
-        free.update_loop()
-        # free.show_recorder()
-        E_num, J_free = free.J_freq()
-        mask=E_num/e.value<E_max
-
-        T_num = np.abs(J_bar[mask]/J_free[mask])
-        return E_num[mask]/e.value,T_num
-    
-    def IV(self,E,T,mu_l=22.436e-3*e.value,Te=0):
-        El = mu_l - e.value*self.Vdc - 6*k_B.value*Te
-        Er = mu_l + 6*k_B.value*Te
-        mask = (El<E)&(Er>E)
-        if Te==0:
-            I = 2*e.value/h.value*np.trapezoid(T[mask],E[mask],dx=E[1]-E[0])
-            return I
-        else:
-            f_L = 1/(np.exp((E-mu_l)/k_B.value/Te)+1)
-            f_R = 1/(np.exp((E-mu_l+e.value*self.Vdc)/k_B.value/Te)+1)
-            I = 2*e.value/h.value*np.trapezoid(T[mask]*(f_L[mask]-f_R[mask]),E[mask],dx=E[1]-E[0])
-            return I
