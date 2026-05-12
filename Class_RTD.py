@@ -237,7 +237,7 @@ class RTD:
         _, diff_psi_Re_freq, diff_psi_Im_freq = self.psi_freq(diff_psi_Re,diff_psi_Im)
         return E, self.hbar/self.m*(psi_Re_freq*diff_psi_Im_freq-psi_Im_freq*diff_psi_Re_freq)
     
-    def Transmission(self):
+    def Transmission(self,E_max=0.9):
         E_num, J_bar = self.J_freq()
 
         free = RTD(self.dx,self.dt,self.a,self.b,self.Ly,self.Lz,self.t_max,self.x0,self.sigma_x,self.kx,self.sigma,self.k,self.N_layer,self.m_en,self.n_en,order=self.order,ABC=True)
@@ -247,7 +247,7 @@ class RTD:
         free.update_loop()
         # free.show_recorder()
         E_num, J_free = free.J_freq()
-        mask=E_num/e.value<0.9
+        mask=E_num/e.value<E_max
 
         T_num = np.abs(J_bar[mask]/J_free[mask])
         return E_num[mask]/e.value,T_num
