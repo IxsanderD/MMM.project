@@ -57,10 +57,7 @@ m = 0
 n = 0
 
 m_eff = 0.023*m_e.value
-order = 4
 dt=CFL*2/(2*hbar.value/m_eff*(1/dx**2)+1/hbar.value*U0)
-if order==4:
-    dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
 E = 0.3*e.value
 kx = np.sqrt(2*m_eff*E/hbar.value**2)
 alpha = 3.0
@@ -68,21 +65,15 @@ sigma = alpha * hbar.value / (dt * N_layer)
 k = 4
 t_max = 30*Lx*np.sqrt(m_eff/2/E)
 
-### Experiment:
+### Experiment: (change barrier distance)
 
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-solver.add_3barriers(U0)
-solver.add_recorder(xr)
-solver.plot_potential()
+E, T = numeric_T(2,dt,m,n)
+plt.plot(E/e.value,T,label=f'Numerical 2th order')
 
-solver.animate(speed = 50)
-solver.restart()
+dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
+E, T = numeric_T(4,dt,m,n)
+plt.plot(E/e.value,T,label=f'Numerical 4th order')
 
-solver.update_loop()
-solver.show_recorder()
-
-E, T = numeric_T(order,dt,m,n)
-plt.plot(E/e.value,T,label=f'Numerical {order}th order')
 plt.xlabel('Energy [eV]')
 plt.ylabel('Transmission')
 plt.legend()
