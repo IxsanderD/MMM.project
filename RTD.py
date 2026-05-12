@@ -128,26 +128,6 @@ t_max = 50*Lx*np.sqrt(m_eff/2/E)
 
 print(f't_max: {t_max}')
 
-def numeric_T(order,dt,m,n,V0=0):
-    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-    solver.add_barriers(U0)
-    solver.add_potential(V0)
-    solver.add_recorder(xr)
-
-    solver.update_loop()
-    E_num, J_bar = solver.J_freq()
-
-    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-    solver.add_potential(V0)
-    solver.add_recorder(xr)
-
-    solver.update_loop()
-    E_num, J_free = solver.J_freq()
-    mask=E_num/e.value<0.9
-
-    T_num = np.abs(J_bar[mask]/J_free[mask])
-    return E_num[mask],T_num
-
 # a = 15e-9
 # b = 5e-9
 # Lx = (3*a+2*b+108e-9) # Extra space for barrier to not have an influence
@@ -211,6 +191,26 @@ def numeric_T(order,dt,m,n,V0=0):
 ###
 # IV curve:
 ###
+
+def numeric_T(order,dt,m,n,V0=0):
+    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+    solver.add_barriers(U0)
+    solver.add_potential(V0)
+    solver.add_recorder(xr)
+
+    solver.update_loop()
+    E_num, J_bar = solver.J_freq()
+
+    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+    solver.add_potential(V0)
+    solver.add_recorder(xr)
+
+    solver.update_loop()
+    E_num, J_free = solver.J_freq()
+    mask=E_num/e.value<0.9
+
+    T_num = np.abs(J_bar[mask]/J_free[mask])
+    return E_num[mask],T_num
 
 def IV(Vdc,E,T,mu_l=22.436e-3*e.value,Te=0):
     El = mu_l - 6*k_B.value*Te - Vdc
