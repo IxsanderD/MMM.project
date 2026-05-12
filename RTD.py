@@ -148,59 +148,6 @@ def numeric_T(order,dt,m,n,V0=0):
     T_num = np.abs(J_bar[mask]/J_free[mask])
     return E_num[mask],T_num
 
-###
-# Validation with analytical solution:
-###
-
-### Analytical solution:
-
-order = 2
-dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-solver.add_barriers(U0)
-solver.add_recorder(xr)
-E_ana,T_ana = solver.analytical_T()
-plt.plot(np.real(E_ana)/e.value,T_ana,label='Analytical')
-
-### Numerical solutions:
-
-# order = 2
-# dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-# E2,T2 = numeric_T(order,dt,m,n)
-# plt.plot(E2,T2,'x',label='Numerical 2nd order')
-
-order = 4
-dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-E4,T4 = numeric_T(order,dt,m,n)
-plt.plot(E4,T4,'o',label='Numerical 4th order')
-
-plt.xlabel('Energy [eV]')
-plt.ylabel('Transmission')
-plt.legend()
-plt.show()
-
-# We can even go a step further and compare both orders:
-
-### Comparison of orders:
-
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
-# solver.add_barriers(U0)
-# solver.add_recorder(xr)
-# solver.update_loop()
-# t,J = solver.J_time()
-# plt.plot(t,J,label='Order 2')
-# solver = RTD(dx,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=4,ABC=True)
-# solver.add_barriers(U0)
-# solver.add_recorder(xr)
-# solver.update_loop()
-# t,J = solver.J_time()
-# plt.plot(t,J,label='Order 4')
-# plt.legend()
-# plt.show()
-
-# The comparison looks good, so we can safely say that the solver can accurately describe RTDs and similar devices. We can now go a step 
-# further by generating an IV of the RTD. We again start by defining our parameters
-
 # a = 15e-9
 # b = 5e-9
 # Lx = (3*a+2*b+108e-9) # Extra space for barrier to not have an influence
