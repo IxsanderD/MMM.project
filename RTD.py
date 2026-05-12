@@ -107,7 +107,7 @@ Ly = 40e-9
 Lz = Ly
 dx = Lx/900
 U0 = 0.6*e.value
-CFL = 1.00
+CFL = 0.9
 sigma_x = a/3
 N_layer = 150
 x0 = N_layer*dx+2*sigma_x
@@ -164,7 +164,7 @@ print(f't_max: {t_max}')
 
 # V0 = 0.05*e.value
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=4,ABC=True)
+# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
 
 # solver.add_barriers(U0)
 # solver.add_potential(V0)
