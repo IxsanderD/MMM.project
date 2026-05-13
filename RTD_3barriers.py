@@ -3,18 +3,18 @@ import matplotlib.pyplot as plt
 from Class_RTD import RTD
 from astropy.constants.astropyconst20 import m_e,hbar,e,k_B,h
 
-### Functioons:
+### Functions:
 
 def numeric_T(order,dt,m,n,V0=0):
-    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-    solver.add_barriers(U0)
+    solver = RTD(dx,dt,a,b,Lx,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+    solver.add_3barriers(U0)
     solver.add_potential(V0)
     solver.add_recorder(xr)
 
     solver.update_loop()
     E_num, J_bar = solver.J_freq()
 
-    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+    solver = RTD(dx,dt,a,b,Lx,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
     solver.add_potential(V0)
     solver.add_recorder(xr)
 
@@ -63,49 +63,28 @@ kx = np.sqrt(2*m_eff*E/hbar.value**2)
 alpha = 3.0
 sigma = alpha * hbar.value / (dt * N_layer)
 k = 4
-t_max = 30*Lx*np.sqrt(m_eff/2/E)
+t_max = 100*Lx*np.sqrt(m_eff/2/E)
 
-### Experiment: (change barrier distance)
+### Experiment:
+
+solver = RTD(dx,dt,a,b,Lx,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+solver.add_3barriers(U0)
+solver.plot_potential()
+solver.add_recorder(xr)
+solver.animate(speed = 200)
+
+E,T = solver.analytical_T_3barriers()
+plt.plot(E/e.value,T,label='Analytical',color='mediumturquoise',linestyle='solid',zorder=1)
 
 E, T = numeric_T(2,dt,m,n)
-plt.plot(E/e.value,T,label=f'Numerical 2th order')
+plt.plot(E/e.value,T,label=f'Numerical 2th order',color='lime',linestyle='dashdot',zorder=10)
 
 dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
 E, T = numeric_T(4,dt,m,n)
-plt.plot(E/e.value,T,label=f'Numerical 4th order')
+plt.plot(E/e.value,T,label=f'Numerical 4th order',color='blue',linestyle='dashed',zorder=10)
 
+plt.grid()
 plt.xlabel('Energy [eV]')
 plt.ylabel('Transmission')
 plt.legend()
 plt.show()
-
-# Te = 0
-# order = 4
-# dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-# Vdc_values = np.linspace(0,0.1,11)*e.value
-# I_values = []
-
-# plt.figure(1)
-# for Vdc in Vdc_values:
-#     m = 0
-#     n = 0
-#     I = 0
-#     E, T = numeric_T(order,dt,m,n,Vdc)
-#     plt.plot(E/e.value,T,label=f'Vdc={Vdc/e.value:.2f} eV')
-#     for n in range(1,10):
-#         for m in range(1,10):
-#             E_nm = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
-#             I += IV(Vdc,E+E_nm,T,Te=Te)
-#     print(f'At Vdc={Vdc/e.value:.2f} eV, I={I:.2e} A')
-#     I_values.append(I)
-# I_values = np.array(I_values)
-
-# plt.xlabel('Energy [eV]')
-# plt.ylabel('Transmission')
-# plt.legend()
-
-# plt.figure(2)
-# plt.plot(Vdc_values/e.value,I_values*10**12)
-# plt.xlabel('Voltage [V]')
-# plt.ylabel('Current [pA]')
-# plt.show()
