@@ -5,13 +5,13 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astropy.constants.astropyconst20 import m_e,hbar,e,h,k_B
 
 class RTD:
-    def __init__(self,dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order,CFL=0.99,ABC=True):
+    def __init__(self,dx,dt,a,b,Lx,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order,CFL=0.99,ABC=True):
         self.dx = dx
         self.dt = dt
         self.CFL = CFL
         self.a = a
         self.b = b
-        self.Lx = 3*a+2*b+108e-9
+        self.Lx = Lx
         self.Ly = Ly
         self.Lz = Lz
         self.t_max = t_max
