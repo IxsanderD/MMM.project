@@ -63,6 +63,14 @@ class RTD:
         self.U[int((2*self.a+self.b+48e-9)//self.dx):int((2*self.a+2*self.b+48e-9)//self.dx)] = U0
         self.U[int((3*self.a+2*self.b+48e-9)//self.dx):int((3*self.a+2*self.b+self.b+48e-9)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
+      
+    def add_4barriers(self,U0):
+        self.U0 = U0
+        self.U[int((self.a+48e-9)//self.dx):int((self.a+self.b+48e-9)//self.dx)] = U0
+        self.U[int((2*self.a+self.b+48e-9)//self.dx):int((2*self.a+2*self.b+48e-9)//self.dx)] = U0
+        self.U[int((3*self.a+2*self.b+48e-9)//self.dx):int((3*self.a+2*self.b+self.b+48e-9)//self.dx)] = U0
+        self.U[int((4*self.a+3*self.b+48e-9)//self.dx):int((4*self.a+3*self.b+self.b+48e-9)//self.dx)] = U0
+        self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)      
         
     def add_potential(self,V0):
         self.U[:int((self.a+48e-9)//self.dx)]  = V0
@@ -242,6 +250,31 @@ class RTD:
             M1 = np.array([[np.exp(-1j*Kx*self.b),0],[0,np.exp(1j*Kx*self.b)]],dtype=complex)
             M2 = np.array([[np.exp(-1j*kx*self.a),0],[0,np.exp(1j*kx*self.a)]],dtype=complex)
             M = M12@M1@M23@M2@M12@M1@M23@M2@M12@M1@M23
+            T.append(1/np.abs(M[0,0])**2)
+        E_array=np.concatenate((E_array_n,E_array_p))
+        return E_array,np.array(T)
+    
+    def analytical_T_4barriers(self,E_max=0.9):
+        T = []
+        E_array_n = np.linspace(0.01,self.U0/e.value-0.01,10000)*e.value
+        kx_array_n = np.sqrt(2*self.m*E_array_n/self.hbar**2)
+        Kx_array_n = np.sqrt(2*self.m*(self.U0-E_array_n)/self.hbar**2)
+        for kx,Kx in zip(kx_array_n,Kx_array_n):
+            M12 = 1/2*np.array([[1+1j*Kx/kx,1-1j*Kx/kx],[1-1j*Kx/kx,1+1j*Kx/kx]],dtype=complex)
+            M23 = 1/2*np.array([[1-1j*kx/Kx,1+1j*kx/Kx],[1+1j*kx/Kx,1-1j*kx/Kx]],dtype=complex)
+            M1 = np.array([[np.exp(Kx*self.b),0],[0,np.exp(-Kx*self.b)]],dtype=complex)
+            M2 = np.array([[np.exp(-1j*kx*self.a),0],[0,np.exp(1j*kx*self.a)]],dtype=complex)
+            M = M12@M1@M23@M2@M12@M1@M23@M2@M12@M1@M23@M2@M12@M1@M23
+            T.append(1/np.abs(M[0,0])**2)
+        E_array_p = np.linspace(self.U0/e.value+0.01,E_max,10000)*e.value
+        kx_array_p = np.sqrt(2*self.m*E_array_p/self.hbar**2)
+        Kx_array_p = np.sqrt(2*self.m*(E_array_p-self.U0)/self.hbar**2)
+        for kx,Kx in zip(kx_array_p,Kx_array_p):
+            M12 = 1/2*np.array([[1+Kx/kx,1-Kx/kx],[1-Kx/kx,1+Kx/kx]],dtype=complex)
+            M23 = 1/2*np.array([[1+kx/Kx,1-kx/Kx],[1-kx/Kx,1+kx/Kx]],dtype=complex)
+            M1 = np.array([[np.exp(-1j*Kx*self.b),0],[0,np.exp(1j*Kx*self.b)]],dtype=complex)
+            M2 = np.array([[np.exp(-1j*kx*self.a),0],[0,np.exp(1j*kx*self.a)]],dtype=complex)
+            M = M12@M1@M23@M2@M12@M1@M23@M2@M12@M1@M23@M2@M12@M1@M23
             T.append(1/np.abs(M[0,0])**2)
         E_array=np.concatenate((E_array_n,E_array_p))
         return E_array,np.array(T)

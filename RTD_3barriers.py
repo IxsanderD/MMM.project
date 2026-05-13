@@ -5,9 +5,12 @@ from astropy.constants.astropyconst20 import m_e,hbar,e,k_B,h
 
 ### Functions:
 
-def numeric_T(order,dt,m,n,V0=0):
+def numeric_T(order,dt,m,n,V0=0,extra_barrier=False):
     solver = RTD(dx,dt,a,b,Lx,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
-    solver.add_3barriers(U0)
+    if extra_barrier:
+        solver.add_4barriers(U0)
+    else:
+        solver.add_3barriers(U0)
     solver.add_potential(V0)
     solver.add_recorder(xr)
 
@@ -42,7 +45,7 @@ def IV(Vdc,E,T,mu_l=22.436e-3*e.value,Te=0):
 
 a = 15e-9
 b = 5e-9
-Lx = (3*a+2*b+108e-9) # Extra space for barrier to not have an influence
+Lx = (3*a+2*b+108e-9)
 Ly = 40e-9
 Lz = Ly
 dx = Lx/900
@@ -63,31 +66,31 @@ kx = np.sqrt(2*m_eff*E/hbar.value**2)
 alpha = 3.0
 sigma = alpha * hbar.value / (dt * N_layer)
 k = 4
-t_max = 100*Lx*np.sqrt(m_eff/2/E)
+t_max = 500*Lx*np.sqrt(m_eff/2/E)
 
-### Experiment:
+### 3 Barriers:
 
-solver = RTD(dx,dt,a,b,Lx,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
-solver.add_3barriers(U0)
-solver.plot_potential()
-solver.add_recorder(xr)
-solver.animate(speed = 200)
+# solver = RTD(dx,dt,a,b,Lx,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=2,ABC=True)
+# solver.add_3barriers(U0)
+# solver.plot_potential()
+# solver.add_recorder(xr)
+# solver.animate(speed = 200)
 
-E,T = solver.analytical_T_3barriers()
-plt.plot(E/e.value,T,label='Analytical',color='mediumturquoise',linestyle='solid',zorder=1)
+# E,T = solver.analytical_T_3barriers()
+# plt.plot(E/e.value,T,label='Analytical',color='mediumturquoise',linestyle='solid',zorder=1)
 
-E, T = numeric_T(2,dt,m,n)
-plt.plot(E/e.value,T,label=f'Numerical 2th order',color='lime',linestyle='dashdot',zorder=10)
+# E, T = numeric_T(2,dt,m,n)
+# plt.plot(E/e.value,T,label=f'Numerical 2th order',color='lime',linestyle='dashdot',zorder=10)
 
-dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
-E, T = numeric_T(4,dt,m,n)
-plt.plot(E/e.value,T,label=f'Numerical 4th order',color='blue',linestyle='dashed',zorder=10)
+# dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
+# E, T = numeric_T(4,dt,m,n)
+# plt.plot(E/e.value,T,label=f'Numerical 4th order',color='blue',linestyle='dashed',zorder=10)
 
-plt.grid()
-plt.xlabel('Energy [eV]')
-plt.ylabel('Transmission')
-plt.legend()
-plt.show()
+# plt.grid()
+# plt.xlabel('Energy [eV]')
+# plt.ylabel('Transmission')
+# # plt.legend()
+# plt.show()
 
 ### Supercomuter code :)
 
@@ -123,3 +126,28 @@ plt.show()
 # plt.xlabel('Voltage [V]')
 # plt.ylabel('Current [pA]')
 # plt.show()
+
+### Four barriers :)
+# (Only fourth order)
+
+dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
+t_max = 1000*Lx*np.sqrt(m_eff/2/E)
+xr = 4*a+4*b+48e-9+dx
+
+solver = RTD(dx,dt,a,b,Lx,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=4,ABC=True)
+solver.add_4barriers(U0)
+solver.plot_potential()
+solver.add_recorder(xr)
+solver.animate(speed = 200)
+
+E,T = solver.analytical_T_4barriers()
+plt.plot(E/e.value,T,label='Analytical',color='mediumturquoise',linestyle='solid',zorder=1)
+
+E, T = numeric_T(4,dt,m,n,extra_barrier=True)
+plt.plot(E/e.value,T,label=f'Numerical 4th order',color='blue',linestyle='dashed',zorder=10)
+
+plt.grid()
+plt.xlabel('Energy [eV]')
+plt.ylabel('Transmission')
+# plt.legend()
+plt.show()
