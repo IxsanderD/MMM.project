@@ -6,35 +6,35 @@ from astropy.constants.astropyconst20 import m_e,hbar,e,k_B,h
 # In this file, we will peform all of our experiments. We start by looking at some animations and plots of our potentials to get our first
 # visual check of the code's validity. We do this by defining the parameters of our class.
 
-# a = 15e-9
-# b = 5e-9
-# Lx = (3*a+2*b+108e-9) # Extra space for barrier to not have an influence
-# Ly = 40e-9
-# Lz = Ly
-# dx = Lx/1000
-# U0 = 0.6*e.value
-# CFL = 0.99
-# sigma_x = a/3
-# N_layer = 160
-# x0 = N_layer*dx+2*sigma_x
-# xr = 2*a+2*b+48e-9+dx
+a = 15e-9
+b = 5e-9
+Lx = (3*a+2*b+78e-9) # Extra space for barrier to not have an influence
+Ly = 40e-9
+Lz = Ly
+dx = Lx/800
+U0 = 0.6*e.value
+CFL = 1.00
+sigma_x = a/3
+N_layer = 140
+x0 = N_layer*dx+2*sigma_x
+xr = 2*a+2*b+48e-9+dx
 
-# m = 0
-# n = 0
+m = 0
+n = 0
 
-# m_eff = 0.023*m_e.value
-# dt=CFL*2/(2*hbar.value/m_eff*(1/dx**2)+1/hbar.value*U0)
-# E = 0.3*e.value
-# print(f'Energy: {E/e.value} eV')
-# kx = np.sqrt(2*m_eff*E/hbar.value**2)
-# alpha = 3.0
-# sigma = alpha * hbar.value / (dt * N_layer)
-# k = 4 # exponent for the absorbing boundary strength
-# t_max = 10*Lx*np.sqrt(m_eff/2/E)
-# # dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
-# dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
+m_eff = 0.023*m_e.value
+dt=CFL*2/(2*hbar.value/m_eff*(1/dx**2)+1/hbar.value*U0)
+E = 0.3*e.value
+print(f'Energy: {E/e.value} eV')
+kx = np.sqrt(2*m_eff*E/hbar.value**2)
+alpha = 3.0
+sigma = alpha * hbar.value / (dt * N_layer)
+k = 4 # exponent for the absorbing boundary strength
+t_max = 10*Lx*np.sqrt(m_eff/2/E)
+# dt = CFL*2/(2*hbar.value/(0.023*m_e.value*dx**2)+U0/hbar.value)
+dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
 
-# print(f't_max: {t_max}')
+print(f't_max: {t_max}')
 
 # Now, we make some aniamtions and plots:
 
@@ -50,11 +50,11 @@ from astropy.constants.astropyconst20 import m_e,hbar,e,k_B,h
 # With Absorbing Boundaries:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,CFL=CFL,order=4,ABC=True)
-# solver.add_recorder(xr)
+solver = RTD(dx,dt,a,b,Lx,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,CFL=CFL,order=4,ABC=True)
+solver.add_recorder(xr)
 
-# solver.animate(speed=200)
-# solver.restart()
+solver.animate(speed=200)
+solver.restart()
 
 # solver.update_loop()
 # solver.show_recorder()
@@ -63,13 +63,13 @@ from astropy.constants.astropyconst20 import m_e,hbar,e,k_B,h
 # With potential barriers:
 ###
 
-# solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=4,ABC=True)
-# solver.add_barriers(U0)
-# solver.add_recorder(xr)
-# solver.plot_potential()
+solver = RTD(dx,dt,a,b,Lx,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=4,ABC=True)
+solver.add_barriers(U0)
+solver.add_recorder(xr)
+solver.plot_potential()
 
-# solver.animate(speed = 50)
-# solver.restart()
+solver.animate(speed = 200)
+solver.restart()
 
 # solver.update_loop()
 # solver.show_recorder()
@@ -105,11 +105,11 @@ b = 5e-9
 Lx = (3*a+2*b+108e-9) # Extra space for barrier to not have an influence
 Ly = 40e-9
 Lz = Ly
-dx = Lx/900
+dx = Lx/600
 U0 = 0.6*e.value
 CFL = 1.00
 sigma_x = a/3
-N_layer = 150
+N_layer = 100
 x0 = N_layer*dx+2*sigma_x
 xr = 2*a+2*b+48e-9+dx
 
@@ -129,7 +129,7 @@ t_max = 50*Lx*np.sqrt(m_eff/2/E)
 print(f't_max: {t_max}')
 
 def numeric_T(order,dt,m,n,V0=0):
-    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+    solver = RTD(dx,dt,a,b,Lx,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
     solver.add_barriers(U0)
     solver.add_potential(V0)
     solver.add_recorder(xr)
@@ -137,7 +137,7 @@ def numeric_T(order,dt,m,n,V0=0):
     solver.update_loop()
     E_num, J_bar = solver.J_freq()
 
-    solver = RTD(dx,dt,a,b,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
+    solver = RTD(dx,dt,a,b,Lx,Ly,Lz,t_max,x0,sigma_x,kx,sigma,k,N_layer,m,n,order=order,ABC=True)
     solver.add_potential(V0)
     solver.add_recorder(xr)
 
