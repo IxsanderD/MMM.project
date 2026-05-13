@@ -22,7 +22,6 @@ class RTD:
         self.m_en = m
         self.n_en = n
         self.E = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
-        print(f'Energy(n,m): {self.E/e.value} eV')
         self.Nx = int(self.Lx//self.dx)
         self.Nt = int(self.t_max//self.dt)
         self.C = 1/np.sqrt(np.sqrt(2*np.pi)*self.sigma_x)
@@ -58,9 +57,17 @@ class RTD:
         self.U[int((2*self.a+self.b+48e-9)//self.dx):int((2*self.a+2*self.b+48e-9)//self.dx)] = U0
         self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
         
+    def add_3barriers(self,U0):
+        self.U0 = U0
+        self.U[int((self.a+48e-9)//self.dx):int((self.a+self.b+48e-9)//self.dx)] = U0
+        self.U[int((2*self.a+self.b+48e-9)//self.dx):int((2*self.a+2*self.b+48e-9)//self.dx)] = U0
+        self.U[int((3*self.a+2*self.b+48e-9)//self.dx):int((3*self.a+2*self.b+self.b+48e-9)//self.dx)] = U0
+        self.Kx = np.sqrt(2*self.m*(self.E-U0)/self.hbar**2 + 0j)
+        
     def add_potential(self,V0):
-        self.U[:int((self.a+48e-9)//self.dx)]  = V0*np.ones(int((self.a+48e-9)//self.dx))
+        self.U[:int((self.a+48e-9)//self.dx)]  = V0
         self.U[int((self.a+48e-9)//self.dx):int((2*self.a+2*self.b+48e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
+        self.U -= V0
         self.Vdc=V0
         
     def plot_potential(self):
