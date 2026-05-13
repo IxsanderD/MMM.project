@@ -88,3 +88,38 @@ plt.xlabel('Energy [eV]')
 plt.ylabel('Transmission')
 plt.legend()
 plt.show()
+
+### Supercomuter code :)
+
+# t_max = 500*Lx*np.sqrt(m_eff/2/E) # High t_max needed to resolve first peak
+
+# Te = 0
+# order = 4
+# dt = CFL*2/(8*hbar.value/(3*0.023*m_e.value*dx**2)+U0/hbar.value)
+# Vdc_values = np.linspace(0,0.1,30)*e.value
+# I_values = []
+
+# plt.figure(1)
+# for Vdc in Vdc_values:
+#     m = 0
+#     n = 0
+#     I = 0
+#     E, T = numeric_T(order,dt,m,n,Vdc)
+#     plt.plot(E/e.value,T,label=f'Vdc={Vdc/e.value:.2f} eV')
+#     for n in range(1,10):
+#         for m in range(1,10):
+#             E_nm = hbar.value**2/(2*0.023*m_e.value)*((np.pi*n/Ly)**2+(np.pi*m/Lz)**2)
+#             I += IV(Vdc,E+E_nm,T,Te=Te)
+#     print(f'At Vdc={Vdc/e.value:.2f} eV, I={I:.2e} A')
+#     I_values.append(I)
+# I_values = np.array(I_values)
+
+# plt.xlabel('Energy [eV]')
+# plt.ylabel('Transmission')
+# plt.legend()
+
+# plt.figure(2)
+# plt.plot(Vdc_values/e.value,I_values*10**12)
+# plt.xlabel('Voltage [V]')
+# plt.ylabel('Current [pA]')
+# plt.show()
