@@ -66,7 +66,7 @@ class RTD:
         
     def add_potential(self,V0):
         self.U[:int((self.a+48e-9)//self.dx)]  = V0
-        self.U[int((self.a+48e-9)//self.dx):int((2*self.a+2*self.b+48e-9)//self.dx)] += np.linspace(V0,0,int((self.a+2*self.b)//self.dx))
+        self.U[int((self.a+48e-9)//self.dx):int((2*self.a+2*self.b+48e-9)//self.dx)] += np.linspace(V0,0,int((2*self.a+2*self.b+48e-9)//self.dx)-int((self.a+48e-9)//self.dx))
         self.U -= V0
         self.Vdc=V0
         
